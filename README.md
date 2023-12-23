@@ -11,16 +11,16 @@ Ce projet vise à fournir diverses applications Lua utiles pour améliorer votre
 Actuellement, le référentiel propose les applications suivantes :
 
 ### 1. [sra_tyres]
-   Application de statut des pneus et plus<\br>
+   Application de statut des pneus et plus<br />
    ![My Image](tyres.png)
 
 ### 2. [sra_damage]
-   Application de statut des dégats<\br>
+   Application de statut des dégats<br />
 ![My Image](damage.png)
 
 
 ### 3. [sra_minidash]
-   Un petit dasboard<\br>
+   Un petit dasboard<br />
 ![My Image](minidash.png)
 
 ## Comment Utiliser
