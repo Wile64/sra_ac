@@ -10,8 +10,8 @@ Ce projet vise à fournir diverses applications Lua utiles pour améliorer votre
 
 Actuellement, le référentiel propose les applications suivantes :
 
-### 1. [sra_tyre]
-   Application de statut des pneus
+### 1. [sra_tyres]
+   Application de statut des pneus et plus
 
 
 ## Comment Utiliser
