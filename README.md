@@ -13,6 +13,9 @@ Actuellement, le référentiel propose les applications suivantes :
 ### 1. [sra_tyres]
    Application de statut des pneus et plus
 
+### 2. [sra_damage]
+   Application de statut des dégats
+
 
 ## Comment Utiliser
 
