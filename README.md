@@ -35,6 +35,8 @@ _* Ne fonctionne pas pour les autres voitures._
 - Dégat droit / gauche
 - Options et zoom disponible
 
+_* Fonctionne pour les autres voitures._
+
 ![My Image](damage.png)
 
 
@@ -47,6 +49,8 @@ _* Ne fonctionne pas pour les autres voitures._
 - KERS et ERS si disponible
 - Options et zoom disponible
   * Il faut que je remette le gap avant et arrière :-)
+
+_* Certaines infos ne fonctionne pas pour les autres voitures._
 
 ![My Image](minidash.png)
 
