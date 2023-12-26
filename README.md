@@ -15,10 +15,11 @@ Il s'agit d'applications que j'ai faites pour moi et que je partage librement po
 - Usure des pneus
 - Charge des pneus
 - Plat des pneus
-- graining des pneus
+- Graining des pneus
 - Blistering des pneus
 - Pincement des roues (ToeIn)
 - Carrossage des roues (Camber)
+- Température des disques si disponible
 - Options et zoom disponible
 
 _* Ne fonctionne pas pour les autres voitures._
