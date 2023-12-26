@@ -1,26 +1,52 @@
-# sra_ac
-
 # Assetto Corsa Lua Applications
+![My Image](sra.png)
 
 Bienvenue dans mes applications Lua pour Assetto Corsa. 
 
-Ce projet vise à fournir diverses applications Lua utiles pour améliorer votre expérience de jeu sur Assetto Corsa.
+Ce projet vise à fournir diverses applications Lua utiles pour améliorer l'expérience de jeu sur Assetto Corsa.
 
-## Contenu
+Il s'agit d'applications que j'ai faites pour moi et que je partage librement pour tout le monde.
 
-Actuellement, le référentiel propose les applications suivantes :
+## sra_tyres
+**Application de statut des pneus et plus.**
 
-### 1. [sra_tyres]
-   Application de statut des pneus et plus<br />
-   ![My Image](tyres.png)
+- Température des pneus (optimum)
+- Pression des pneus (optimum)
+- Usure des pneus
+- Charge des pneus
+- Plat des pneus
+- graining des pneus
+- Blistering des pneus
+- Pincement des roues (ToeIn)
+- Carrossage des roues (Camber)
+- Options et zoom disponible
 
-### 2. [sra_damage]
-   Application de statut des dégats<br />
+_* Ne fonctionne pas pour les autres voitures._
+
+![My Image](tyres.png)
+
+## sra_damage
+**Application de statut des dégats.**
+
+- Dégat Moteur
+- Dégat Boite
+- Dégat avant / arrière
+- Dégat droit / gauche
+- Options et zoom disponible
+
 ![My Image](damage.png)
 
 
-### 3. [sra_minidash]
-   Un petit dasboard<br />
+## sra_minidash
+**Un petit dasboard style GT.**
+
+- Un max d'infos très utilie en course
+- P2P ou DRS selon la voiture
+- Turbo si dipsonible
+- KERS et ERS si disponible
+- Options et zoom disponible
+  * Il faut que je remette le gap avant et arrière :-)
+
 ![My Image](minidash.png)
 
 ## Comment Utiliser
