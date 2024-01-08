@@ -22,7 +22,7 @@ local labelRemain = Label(vec2(40, 40), "REMAIN.", "0", config.Scale, config.Lin
 local labelLaps = Label(vec2(40, 40), "LAP(S)", "0", config.Scale, config.LineColor)
 local labelBias = Label(vec2(62, 40), "BIAS", "0", config.Scale, config.LineColor)
 
-local labelP2P = Label(vec2(45, 40), "", "0", config.Scale, config.LineColor)
+local labelP2P = Label(vec2(45, 40), "P2P", "0", config.Scale, config.LineColor)
 local labelDRS = Label(vec2(45, 40), "", "0", config.Scale, config.LineColor)
 local labelGear = Label(vec2(44, 100), "", "0", config.Scale, config.LineColor)
 
@@ -30,130 +30,6 @@ local labelDelta = Label(vec2(120, 40), "DELTA", "0", config.Scale, config.LineC
 local labelEstimated = Label(vec2(120, 40), "ESTIMATED LAP", "0", config.Scale, config.LineColor)
 local labelLastTime = Label(vec2(120, 40), "LAST LAP", "0", config.Scale, config.LineColor)
 local labelBestTime = Label(vec2(120, 40), "BEST LAP", "0", config.Scale, config.LineColor)
-
-
-local isInitialized = false
-local currentSessionIndex = 0
-local isSessionStarted = false
-local driverBefore = "Initialize"
-local driverAfter = "Initialize"
-
-local function nickName(name)
-  local prev_token = ""
-  local last = ""
-  local result = ""
-  for token in string.gmatch(name, "[^%s._-[(())[{}|]+") do
-    if prev_token ~= "" then
-      if string.match(prev_token, ".*]") then
-        --print(prev_token)
-        result = result
-      else
-        --print(prev_token)
-        result = result .. string.sub(prev_token, 1, 1) .. "."
-      end
-    end
-    prev_token = token
-    last = token
-  end
-  return result .. last
-end
-
----gap in second
----@param gap number
----@return string
-local function gapToString(gap)
-  local minutes = math.floor(gap / 60)
-  local seconds = gap - (minutes * 60)
-  local centiseconds = math.floor((seconds - math.floor(seconds)) * 100)
-  if minutes > 0 then
-    return string.format("%d:%02d.%02d", minutes, math.floor(seconds), centiseconds)
-  else
-    return string.format("%d.%02d", seconds, centiseconds)
-  end
-end
-
----@return string
-local function getDeltaStr(car1, car2)
-  if ac.getSim().isSessionStarted then
-    if car1.lapCount ~= car2.lapCount then
-      return string.format("%d Lap(s)", car1.lapCount - car2.lapCount)
-    else
-      if car2.speedKmh < 1 then
-        return '-.---'
-      end
-      local car1Pos = car1.splinePosition
-      local car2Pos = car2.splinePosition
-      return gapToString(((car1Pos - car2Pos) / (car2.speedKmh / 3.6) * ac.getSim().trackLengthM))
-    end
-  else
-    return ''
-  end
-end
-
-local function updateGap(dt)
-  local maxCar = ac.getSim().carsCount
-  local myPos = ac.getCar(0).racePosition
-  local nombre = math.max(myPos - 1, 0)
-  local before = math.max(math.min(nombre, maxCar + 1), 0)
-  local after = nombre + 2
-  local carBeforeID = -1
-  local carAfterID = -1
-
-  for i = 0, maxCar - 1 do
-    if ac.getCar(i).racePosition == before then
-      carBeforeID = i
-    end
-    if ac.getCar(i).racePosition == after then
-      carAfterID = i
-    end
-  end
-  if (before == 0) then
-    driverBefore = "your first :)"
-  else
-    local driverName = nickName(ac.getDriverName(carBeforeID))
-    if ac.getCar(carBeforeID).isActive then
-      if ac.getCar(carBeforeID).isInPit or ac.getCar(carBeforeID).isInPitlane then
-        driverBefore = string.format("%d %s %s", before, driverName, "In Pit")
-      elseif ac.getCar(carBeforeID).lapCount > ac.getCar(0).lapCount then
-        driverBefore = string.format("%d %s %d laps", before, driverName,
-          ac.getCar(carBeforeID).lapCount - ac.getCar(0).lapCount)
-      else
-        driverBefore = string.format("%d %s %s", before, driverName, getDeltaStr(ac.getCar(carBeforeID), ac.getCar(0)))
-      end
-    else
-      driverBefore = string.format("%d %s %s", before, driverName, "Disconnected")
-    end
-  end
-  if (after > maxCar) then
-    driverAfter = "your last :'("
-  else
-    local driverName = nickName(ac.getDriverName(carAfterID))
-    if ac.getCar(carAfterID).isActive then
-      if ac.getCar(carAfterID).isInPit or ac.getCar(carAfterID).isInPitlane then
-        driverAfter = string.format("%d %s %s", after, driverName, "In Pit")
-      elseif ac.getCar(0).lapCount > ac.getCar(carAfterID).lapCount then
-        driverBefore = string.format("%d %s %d laps", before, driverName,
-          ac.getCar(0).lapCount - ac.getCar(carAfterID).lapCount)
-      else
-        driverAfter = string.format("%d %s %s", after, driverName, getDeltaStr(ac.getCar(0), ac.getCar(carAfterID)))
-      end
-    else
-      driverAfter = string.format("%d %s %s", after, driverName, "Disconnected")
-    end
-  end
-end
-
-local function initialize()
-  isInitialized = true
-  currentSessionIndex = ac.getSim().currentSessionIndex
-  isSessionStarted = false
-end
-
-if ac.onSessionStart then
-  ac.onSessionStart(function()
-    initialize()
-  end)
-end
 
 local function DrawBarRPM(progress, numRectangles, height, color)
   local totalWidth = ui.windowSize().x - 1
@@ -216,13 +92,6 @@ function script.windowMain(dt)
     ui.sameLine()
     progressBarH(car.carState.kersCharge, vec2(160 * config.Scale, 5 * config.Scale), kersColors[kersStatus])
   end
-
-  -- if ac.getSim().raceSessionType == ac.SessionType.Race then
-  --   ui.dwriteText(driverBefore, 11 * config.Scale, rgbm.colors.white)
-  --   ui.sameLine(10, 170 * config.Scale)
-  --   ui.dwriteText(driverAfter, 11 * config.Scale, rgbm.colors.white)
-  -- end
-
   ui.beginGroup()
   if car.carState.tractionControlMode > 0 then
     labelTC:enable()
@@ -277,11 +146,11 @@ function script.windowMain(dt)
   ui.beginGroup()
   if car.carState.p2pStatus > 0 then
     if car.carState.p2pStatus == 1 then
-      labelDRS:setBgColor(rgbm.colors.red)
+      labelP2P:setBgColor(rgbm.colors.red)
     elseif car.carState.p2pStatus == 2 then
-      labelDRS:setBgColor(rgbm.colors.green)
+      labelP2P:setBgColor(rgbm.colors.green)
     elseif car.carState.p2pStatus == 3 then
-      labelDRS:setBgColor(rgbm.colors.purple)
+      labelP2P:setBgColor(rgbm.colors.purple)
     end
     labelP2P:draw(string.format("%d", car.carState.p2pActivations))
   elseif car.carState.drsPresent then
@@ -417,21 +286,4 @@ end
 function script.update(dt)
   car:setFocusedCar()
   car:update(dt)
-  local sim = ac.getSim()
-  if sim == nil then return end
-
-  if sim.currentSessionIndex ~= currentSessionIndex or sim.isSessionStarted ~= isSessionStarted then
-    isInitialized = false
-  end
-
-  if not isInitialized then
-    initialize()
-  end
-
-  if sim.isSessionStarted then
-    isSessionStarted = true
-  end
-  if sim.raceSessionType == ac.SessionType.Race then
-    updateGap(dt)
-  end
 end
