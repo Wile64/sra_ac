@@ -48,12 +48,24 @@ _* Fonctionne pour les autres voitures._
 - Turbo si dipsonible
 - KERS et ERS si disponible
 - Options et zoom disponible
-  * Il faut que je remette le gap avant et arrière :-)
 
 _* Certaines infos ne fonctionne pas pour les autres voitures._
 
 ![My Image](minidash.png)
 
+## sra_gap
+**Affiche le gap de x pilotes devant et derrière.**
+
+- Position
+- Nom du pilote
+- Meilleur tour
+- Dernier tour
+- Type de pneu
+- Gap
+- Dans les pits
+- Options et zoom disponible
+
+![My Image](gap.png)
 ## Comment Utiliser
 
 Copiez les fichiers de l'application souhaitée dans le dossier app/lua de votre installation d'Assetto Corsa.
