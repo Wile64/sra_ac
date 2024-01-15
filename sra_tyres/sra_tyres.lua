@@ -142,7 +142,7 @@ end
 local function drawTyreLeft(tyre, rectSize, front)
   ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
   if config.showGrain then
-    progressBarV(tyre.tyreGrain, vec2(10 * config.Scale, rectSize.y), rgbm.colors.maroon)
+    progressBarV(tyre.tyreGrain, vec2(8 * config.Scale, rectSize.y), rgbm.colors.maroon)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -153,7 +153,7 @@ local function drawTyreLeft(tyre, rectSize, front)
     ui.sameLine()
   end
   if config.showBlister then
-    progressBarV(tyre.tyreBlister, vec2(10 * config.Scale, rectSize.y), rgbm.colors.olive)
+    progressBarV(tyre.tyreBlister, vec2(8 * config.Scale, rectSize.y), rgbm.colors.olive)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -164,7 +164,7 @@ local function drawTyreLeft(tyre, rectSize, front)
     ui.sameLine()
   end
   if config.showFlatSpot then
-    progressBarV(tyre.tyreFlatSpot, vec2(10 * config.Scale, rectSize.y), rgbm.colors.silver)
+    progressBarV(tyre.tyreFlatSpot, vec2(8 * config.Scale, rectSize.y), rgbm.colors.silver)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -175,7 +175,7 @@ local function drawTyreLeft(tyre, rectSize, front)
     ui.sameLine()
   end
   if config.showLoad then
-    progressBarV(tyre.load / 10000, vec2(10 * config.Scale, rectSize.y), rgbm.colors.orange)
+    progressBarV(tyre.load / 10000, vec2(8 * config.Scale, rectSize.y), rgbm.colors.orange)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -216,12 +216,12 @@ local function drawTyreLeft(tyre, rectSize, front)
     getTyreColor(tyre.tyreOutsideTemperature, tyre.tyreOptimumTemperature), 4)
 
   if showDiscTemp and config.showDisc then
-    local discPosition = startPosition + vec2(15 * config.Scale, 15 * config.Scale)
+    local discPosition = startPosition + vec2(16 * config.Scale, 15 * config.Scale)
     if front then
-      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(10 * config.Scale, 28 * config.Scale)),
+      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(11 * config.Scale, 28 * config.Scale)),
         getDiscColor(tyre.discTemperature, true), 4, true)
     else
-      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(10 * config.Scale, 28 * config.Scale)),
+      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(11 * config.Scale, 28 * config.Scale)),
         getDiscColor(tyre.discTemperature, false), 4, false)
     end
   end
@@ -255,7 +255,7 @@ local function drawTyreLeft(tyre, rectSize, front)
   ui.dummy(vec2(rectSize.x * 3.2, rectSize.y))
   ui.dwriteTextAligned(
     string.format("%4d%4d%4d", tyre.tyreInsideTemperature, tyre.tyreMiddleTemperature, tyre.tyreOutsideTemperature),
-    9 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
+    8 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
     rgbm.colors.white)
   ui.endGroup()
   ui.sameLine()
@@ -300,7 +300,7 @@ local function drawTyreRight(tyre, rectSize, front)
   local startPosition = ui.getCursor()
   ui.beginRotation()
 
-  local discPosition = startPosition + vec2(-5 * config.Scale, 15 * config.Scale)
+  local discPosition = startPosition + vec2(-6 * config.Scale, 15 * config.Scale)
 
   ui.drawRectFilled(startPosition, startPosition + rectSize,
     getTyreColor(tyre.tyreInsideTemperature, tyre.tyreOptimumTemperature), 4)
@@ -331,10 +331,10 @@ local function drawTyreRight(tyre, rectSize, front)
   end
   if showDiscTemp and config.showDisc then
     if front then
-      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(10 * config.Scale, 28 * config.Scale)),
+      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(11 * config.Scale, 28 * config.Scale)),
         getDiscColor(tyre.discTemperature, true), 4, true)
     else
-      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(10 * config.Scale, 28 * config.Scale)),
+      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(11 * config.Scale, 28 * config.Scale)),
         getDiscColor(tyre.discTemperature, false), 4, false)
     end
   end
@@ -345,7 +345,7 @@ local function drawTyreRight(tyre, rectSize, front)
   else
     avg = tyre.tyrePressure - carState.idealRearPressure
   end
-  local infos = string.format("Core %d°\n%.1f PSI\n%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
+  local infos = string.format("Core %d°\n%.1f PSI\n-%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
   if avg >= 0 then
     infos = string.format("Core %d°\n%.1f PSI\n+%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
   end
@@ -356,14 +356,14 @@ local function drawTyreRight(tyre, rectSize, front)
   ui.endRotation(90 - camber)
   ui.dummy(vec2(rectSize.x * 3.3, rectSize.y))
   ui.dwriteTextAligned(
-    string.format("  %4d%4d%4d", tyre.tyreInsideTemperature, tyre.tyreMiddleTemperature, tyre.tyreOutsideTemperature),
-    9 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
+    string.format(" %4d%4d%4d", tyre.tyreInsideTemperature, tyre.tyreMiddleTemperature, tyre.tyreOutsideTemperature),
+    8 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
     rgbm.colors.white)
   ui.endGroup()
   ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
   if config.showLoad then
     ui.sameLine()
-    progressBarV(tyre.load / 10000, vec2(10 * config.Scale, rectSize.y), rgbm.colors.orange)
+    progressBarV(tyre.load / 10000, vec2(8 * config.Scale, rectSize.y), rgbm.colors.orange)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -374,7 +374,7 @@ local function drawTyreRight(tyre, rectSize, front)
   end
   if config.showFlatSpot then
     ui.sameLine()
-    progressBarV(tyre.tyreFlatSpot, vec2(10 * config.Scale, rectSize.y), rgbm.colors.silver)
+    progressBarV(tyre.tyreFlatSpot, vec2(8 * config.Scale, rectSize.y), rgbm.colors.silver)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -385,7 +385,7 @@ local function drawTyreRight(tyre, rectSize, front)
   end
   if config.showBlister then
     ui.sameLine()
-    progressBarV(tyre.tyreBlister, vec2(10 * config.Scale, rectSize.y), rgbm.colors.olive)
+    progressBarV(tyre.tyreBlister, vec2(8* config.Scale, rectSize.y), rgbm.colors.olive)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -396,7 +396,7 @@ local function drawTyreRight(tyre, rectSize, front)
   end
   if config.showGrain then
     ui.sameLine()
-    progressBarV(tyre.tyreGrain, vec2(10 * config.Scale, rectSize.y), rgbm.colors.maroon)
+    progressBarV(tyre.tyreGrain, vec2(8 * config.Scale, rectSize.y), rgbm.colors.maroon)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -456,12 +456,12 @@ function script.windowMain(dt)
   if not loadedDiscInfo then
     loadDiscInfo()
   end
-
+  ui.pushDWriteFont('montserrat:\\fonts\\.')
   local drawOffset = ui.getCursor()
   local contentSize = ui.windowSize():sub(drawOffset)
   display.rect({ pos = drawOffset, size = contentSize, color = rgbm(0.1, 0.1, 0.1, 0.3) })
 
-  local tyreSize = vec2(17 * config.Scale, 70 * config.Scale)
+  local tyreSize = vec2(18 * config.Scale, 70 * config.Scale)
 
   if config.showTyreName then
     ui.dwriteText(string.format("Tyre : %s", ac.getTyresLongName(0, carState.carState.compoundIndex)), 10 * config.Scale,
@@ -481,11 +481,15 @@ function script.windowMain(dt)
   drawTyreLeft(carState:getTyreRL(), tyreSize, false)
   ui.sameLine()
   drawTyreRight(carState:getTyreRR(), tyreSize, false)
+  ui.popDWriteFont()
 end
 
 function script.update(dt)
     carState:setCarID(0)
     carState:update(dt)
+    if ac.getSim().isInMainMenu then
+      ac.setWindowOpen("windowSetup", true)
+    end
 end
 
 ---@param title string
@@ -605,7 +609,7 @@ function script.windowSetup(dt)
 end
 
 function script.windowSetting(dt)
-  local newScale = ui.slider('##scaleSlider', config.Scale, 1.0, 2.0, 'Scale: %1.1f%')
+  local newScale = ui.slider('##scaleSlider', config.Scale, 0.5, 2.0, 'Scale: %1.1f%')
   if ui.itemEdited() then
     config.Scale = newScale
   end
