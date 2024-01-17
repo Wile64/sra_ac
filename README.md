@@ -19,7 +19,7 @@
 ## sra_tyres
 **Application de statut des pneus et plus.**
 <ul>
-<p style="float:right"><img src="tyres.png" /></p>
+<p><img src="tyres.png" /></p>
 <li>Température des pneus (optimum)</li>
 <li>Pression des pneus (optimum)</li>
 <li>Usure des pneus</li>
@@ -37,7 +37,7 @@ _* Ne fonctionne pas pour les autres voitures._
 
 
 ## sra_damage
-<p style="float:right"><img src="damage.png" /></p>
+<p><img src="damage.png" /></p>
 
 **Application de statut des dégats.**
 <ul>
@@ -50,10 +50,8 @@ _* Ne fonctionne pas pour les autres voitures._
 
 _*Fonctionne pour les autres voitures._
 
-</br></br></br></br>
-
 ## sra_minidash
-<p style="float:right"><img src="minidash.png" /></p>
+<p><img src="minidash.png" /></p>
 
 **Un petit dasboard style GT.**
 <ul>
@@ -68,12 +66,13 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 </br>
 
 ## sra_gap
+<p><img src="gap.png" /></p>
+
 **Affiche le gap de x pilotes devant et derrière.**
 
 <ul>
 <li>Position</li>
 <li>Nom du pilote</li>
-<p style="float:right"><img src="gap.png" /></p>
 <li>Meilleur tour</li>
 <li>Dernier tour</li>
 <li>Type de pneu</li>
@@ -85,9 +84,9 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 
 ## Comment Utiliser
 
->Copiez les fichiers de l'application souhaitée dans le dossier app/lua de votre installation d'Assetto Corsa.
+Copiez les fichiers de l'application souhaitée dans le dossier app/lua de votre installation d'Assetto Corsa.
 
->Lancez Assetto Corsa et profitez de votre nouvelle fonctionnalité !
+Lancez Assetto Corsa et profitez de votre nouvelle fonctionnalité !
 
 >Contribution
 >Si vous souhaitez contribuer à ce projet, n'hésitez pas à envoyer des pull requests. 
