@@ -83,21 +83,23 @@ function script.windowMain(dt)
 
   ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
   for i = min, max do
-    local gap = ''
-    if currentSessionType == ac.SessionType.Race then
-      if i > 1 and CARS[i].isActive then
-        if not CARS[i].inPit then
-          gap = getRealGapStr(CARS[i - 1], CARS[i])
+    if CARS[i].isActive then
+      local gap = ''
+      if currentSessionType == ac.SessionType.Race then
+        if i > 1 and CARS[i].isActive then
+          if not CARS[i].inPit then
+            gap = getRealGapStr(CARS[i - 1], CARS[i])
+          end
+        end
+      else
+        if i > 1 and CARS[i].isActive then
+          if not CARS[i].inPit and CARS[i].bestLapTimeMs ~= 0 then
+            gap = getTimeGapStr(CARS[i - 1], CARS[i])
+          end
         end
       end
-    else
-      if i > 1 and CARS[i].isActive then
-        if not CARS[i].inPit and CARS[i].bestLapTimeMs ~= 0 then
-          gap = getTimeGapStr(CARS[i - 1], CARS[i])
-        end
-      end
+      drawList(CARS[i], gap, i)
     end
-    drawList(CARS[i], gap, i)
   end
   ui.popStyleVar()
 end
@@ -105,7 +107,7 @@ end
 function script.windowSetting(dt)
   config.scale = ui.slider('##Scale', config.scale, 1.0, 3.0, 'Scale: %1.1f')
 
-  config.carCount = ui.slider('##CarCount', config.carCount, 1.0, 10.0, 'car: %1.0f')
+  config.carCount = ui.slider('##CarCount', config.carCount, 1.0, 25.0, 'car: %1.0f')
 
   if ui.checkbox("Show Best Lap", config.bestLap) then
     config.bestLap = not config.bestLap
@@ -146,11 +148,21 @@ function script.update(dt)
   if counter > 0.4 then
     if raceSessionType == ac.SessionType.Race then
       table.sort(CARS, function(car1, car2)
-        return car1.racePosition < car2.racePosition
+        if not car1.isActive and car2.isActive then
+          return false
+        elseif car1.isActive and not car2.isActive then
+          return true
+        else
+          return car1.racePosition < car2.racePosition
+        end
       end)
     elseif raceSessionType == ac.SessionType.Qualify or raceSessionType == ac.SessionType.Practice then
       table.sort(CARS, function(car1, car2)
-        if car1.bestLapTimeMs == 0 and car2.bestLapTimeMs == 0 then
+        if not car1.isActive and car2.isActive then
+          return false
+        elseif car1.isActive and not car2.isActive then
+          return true
+        elseif car1.bestLapTimeMs == 0 and car2.bestLapTimeMs == 0 then
           return car1.racePosition < car2.racePosition
         elseif car1.bestLapTimeMs == car2.bestLapTimeMs then
           return car1.racePosition < car2.racePosition

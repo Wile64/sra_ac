@@ -94,7 +94,6 @@ end
 
 function CarsInfo:reset()
     self.isActive = false
-    self.nickName = ""
     self.laps = 0
     self.bestLapTimeMs = 0
     self.racePosition = 0
@@ -104,33 +103,40 @@ function CarsInfo:reset()
     self.previousLapTimeMs = 0
     self.lapTimeMs = 0
     self.tyreName = ""
-    ac.log("reset")
+    ac.log(string.format("reset %d", self.id))
+end
+
+function CarsInfo:setActive(isActive)
+    if isActive ~= self.isActive then
+        self:reset()
+        self.isActive = isActive
+        if self.isActive then
+            self.nickName = nickName(ac.getDriverName(self.id))
+        end
+    end
 end
 
 ---comment
 ---@param dt number
 ---@param stateCar ac.StateCar
 function CarsInfo:update(dt, stateCar)
-    self.isActive = stateCar.isActive
-    self.nickName = nickName(ac.getDriverName(self.id))
-    local lapTimeMs = stateCar.lapTimeMs
-    if lapTimeMs < self.lapTimeMs then
-        self.previousLapTimeMs = self.lapTimeMs + dt
-        if self.bestLapTimeMs == 0 then
-            self.bestLapTimeMs = self.previousLapTimeMs
-        elseif self.bestLapTimeMs > self.previousLapTimeMs then
-            self.bestLapTimeMs = self.previousLapTimeMs
+    self:setActive(stateCar.isConnected)
+    if self.isActive then
+        local lapTimeMs = stateCar.lapTimeMs
+        if lapTimeMs < self.lapTimeMs and stateCar.isLastLapValid then
+            self.previousLapTimeMs = self.lapTimeMs + dt
+            if self.bestLapTimeMs == 0 then
+                self.bestLapTimeMs = self.previousLapTimeMs
+            elseif self.bestLapTimeMs > self.previousLapTimeMs then
+                self.bestLapTimeMs = self.previousLapTimeMs
+            end
         end
-    end
-    self.lapTimeMs = lapTimeMs
-    self.laps = stateCar.sessionLapCount
-    if ac.getSim().raceSessionType ~= ac.SessionType.Race then
-        self.racePosition = self.id
-    else
+        self.lapTimeMs = lapTimeMs
+        self.laps = stateCar.sessionLapCount
         self.racePosition = stateCar.racePosition
+        self.inPit = stateCar.isInPit or stateCar.isInPitlane
+        self.splinePosition = stateCar.splinePosition
+        self.speedKmh = stateCar.speedKmh
+        self.tyreName = ac.getTyresName(self.id, stateCar.compoundIndex)
     end
-    self.inPit = stateCar.isInPit or stateCar.isInPitlane
-    self.splinePosition = stateCar.splinePosition
-    self.speedKmh = stateCar.speedKmh
-    self.tyreName = ac.getTyresName(self.id, stateCar.compoundIndex)
 end

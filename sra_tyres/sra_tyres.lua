@@ -146,7 +146,8 @@ local function drawTyreLeft(tyre, rectSize, front)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
-        ui.text("Tyre Grain\nThis doesn't seem to be well managed,\nif you drive with cold tires,\nit only increases more")
+        ui.text(
+          "Tyre Grain\nThis doesn't seem to be well managed,\nif you drive with cold tires,\nit only increases more")
         ui.popFont()
       end)
     end
@@ -200,6 +201,8 @@ local function drawTyreLeft(tyre, rectSize, front)
   ui.setCursorX(ui.getCursorX() + 3 * config.Scale)
   ui.beginRotation()
   local startPosition = ui.getCursor()
+  local startCore = vec2(startPosition.x + 1, startPosition.y + 3)
+
   ui.drawRectFilled(startPosition, startPosition + rectSize,
     getTyreColor(tyre.tyreInsideTemperature, tyre.tyreOptimumTemperature), 4)
   if tyre.ndSlip > 1 then
@@ -215,13 +218,18 @@ local function drawTyreLeft(tyre, rectSize, front)
   ui.drawRectFilled(startPosition, startPosition + rectSize,
     getTyreColor(tyre.tyreOutsideTemperature, tyre.tyreOptimumTemperature), 4)
 
+  local tyreImage = ".//images//core.png"
+  local size = vec2(rectSize.x * 3, rectSize.y - 10)
+  ui.drawImage(tyreImage, startCore, startCore + size,
+    getTyreColor(tyre.tyreCoreTemperature, tyre.tyreOptimumTemperature))
+
   if showDiscTemp and config.showDisc then
-    local discPosition = startPosition + vec2(16 * config.Scale, 15 * config.Scale)
+    local discPosition = startPosition + vec2(18 * config.Scale, 15 * config.Scale)
     if front then
-      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(11 * config.Scale, 28 * config.Scale)),
+      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(12 * config.Scale, 28 * config.Scale)),
         getDiscColor(tyre.discTemperature, true), 4, true)
     else
-      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(11 * config.Scale, 28 * config.Scale)),
+      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(12 * config.Scale, 28 * config.Scale)),
         getDiscColor(tyre.discTemperature, false), 4, false)
     end
   end
@@ -252,7 +260,7 @@ local function drawTyreLeft(tyre, rectSize, front)
     ui.Alignment.Center, ui.Alignment.Center, false, rgbm.colors.black)
   local camber = math.min(math.max(tyre.camber, -4), 4)
   ui.endRotation(90 + camber)
-  ui.dummy(vec2(rectSize.x * 3.2, rectSize.y))
+  ui.dummy(vec2(rectSize.x * 3.3, rectSize.y))
   ui.dwriteTextAligned(
     string.format("%4d%4d%4d", tyre.tyreInsideTemperature, tyre.tyreMiddleTemperature, tyre.tyreOutsideTemperature),
     8 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
@@ -283,7 +291,7 @@ local function drawTyreRight(tyre, rectSize, front)
     end)
   end
   ui.sameLine()
-
+  ui.setCursorX(ui.getCursorX()+1)
   ui.beginGroup()
   if config.showToeIn then
     toeIn(tyre.toeIn, vec2(rectSize.x * 3, 10 * config.Scale), rgbm.colors.cyan)
@@ -298,6 +306,8 @@ local function drawTyreRight(tyre, rectSize, front)
   ui.setCursorX(ui.getCursorX() + 3 * config.Scale)
 
   local startPosition = ui.getCursor()
+  local startCore = vec2(startPosition.x + 1, startPosition.y + 3)
+
   ui.beginRotation()
 
   local discPosition = startPosition + vec2(-6 * config.Scale, 15 * config.Scale)
@@ -319,6 +329,11 @@ local function drawTyreRight(tyre, rectSize, front)
   if tyre.ndSlip > 1 then
     ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
   end
+  local tyreImage = ".//images//core.png"
+  local size = vec2(rectSize.x * 3, rectSize.y - 10)
+  ui.drawImage(tyreImage, startCore, startCore + size,
+    getTyreColor(tyre.tyreCoreTemperature, tyre.tyreOptimumTemperature))
+
   if tyre.tyreDirty > 0 then
     local durtySize = vec2(rectSize.x, rectSize.y * (tyre.tyreDirty / 5.0))
     local startDurty = ui.getCursor()
@@ -331,10 +346,10 @@ local function drawTyreRight(tyre, rectSize, front)
   end
   if showDiscTemp and config.showDisc then
     if front then
-      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(11 * config.Scale, 28 * config.Scale)),
+      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(12 * config.Scale, 28 * config.Scale)),
         getDiscColor(tyre.discTemperature, true), 4, true)
     else
-      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(11 * config.Scale, 28 * config.Scale)),
+      ui.drawRectFilled(discPosition, discPosition + (rectSize - vec2(12 * config.Scale, 28 * config.Scale)),
         getDiscColor(tyre.discTemperature, false), 4, false)
     end
   end
@@ -345,7 +360,7 @@ local function drawTyreRight(tyre, rectSize, front)
   else
     avg = tyre.tyrePressure - carState.idealRearPressure
   end
-  local infos = string.format("Core %d°\n%.1f PSI\n-%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
+  local infos = string.format("Core %d°\n%.1f PSI\n%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
   if avg >= 0 then
     infos = string.format("Core %d°\n%.1f PSI\n+%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
   end
@@ -385,7 +400,7 @@ local function drawTyreRight(tyre, rectSize, front)
   end
   if config.showBlister then
     ui.sameLine()
-    progressBarV(tyre.tyreBlister, vec2(8* config.Scale, rectSize.y), rgbm.colors.olive)
+    progressBarV(tyre.tyreBlister, vec2(8 * config.Scale, rectSize.y), rgbm.colors.olive)
     if ui.itemHovered() then
       ui.tooltip(function()
         ui.pushFont(ui.Font.Monospace)
@@ -485,11 +500,11 @@ function script.windowMain(dt)
 end
 
 function script.update(dt)
-    carState:setCarID(0)
-    carState:update(dt)
-    if ac.getSim().isInMainMenu then
-      ac.setWindowOpen("windowSetup", true)
-    end
+  carState:setCarID(0)
+  carState:update(dt)
+  if ac.getSim().isInMainMenu then
+    ac.setWindowOpen("windowSetup", true)
+  end
 end
 
 ---@param title string
