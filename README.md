@@ -82,6 +82,32 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Type de pneu</li>
 </ul>
 
+## sra_hud
+<p><img src="gap.png" /></p>
+
+**Plusieus petits affichages .**
+
+<ul>
+<li>Race info</li>
+<li><img src="raceinfo.png" /></li>
+<li>Heure locale et du serveur</li>
+<li><img src="time.png" /></li>
+<li>Affichage des temoins</li>
+<li><img src="leds.png" /></li>
+<li>Meilleurs tours</li>
+<li><img src="times.png" /></li>
+<li>Secteurs</li>
+<li><img src="sectors.png" /></li>
+</ul>
+
+**Configuration globale:**
+
+<ul>
+<li>Zoom</li>
+<li>Couleur de fond avec alpha</li>
+<li>Couleur de texte</li>
+</ul>
+
 ## Comment Utiliser
 
 Copiez les fichiers de l'application souhaitée dans le dossier app/lua de votre installation d'Assetto Corsa.
