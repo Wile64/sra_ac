@@ -90,6 +90,7 @@ function CarsInfo:initialize(id)
     self.speedKmh = 0
     self.previousLapTimeMs = 0
     self.lapTimeMs = 0
+    self.isLastLapValid = false
 end
 
 function CarsInfo:reset()
@@ -103,7 +104,7 @@ function CarsInfo:reset()
     self.previousLapTimeMs = 0
     self.lapTimeMs = 0
     self.tyreName = ""
-    ac.log(string.format("reset %d", self.id))
+    self.isLastLapValid = false
 end
 
 function CarsInfo:setActive(isActive)
@@ -122,13 +123,16 @@ end
 function CarsInfo:update(dt, stateCar)
     self:setActive(stateCar.isConnected)
     if self.isActive then
+        self.isLastLapValid = stateCar.isLastLapValid
         local lapTimeMs = stateCar.lapTimeMs
-        if lapTimeMs < self.lapTimeMs and stateCar.isLastLapValid then
+        if lapTimeMs < self.lapTimeMs then
             self.previousLapTimeMs = self.lapTimeMs + dt
-            if self.bestLapTimeMs == 0 then
-                self.bestLapTimeMs = self.previousLapTimeMs
-            elseif self.bestLapTimeMs > self.previousLapTimeMs then
-                self.bestLapTimeMs = self.previousLapTimeMs
+            if stateCar.isLastLapValid then
+                if self.bestLapTimeMs == 0 then
+                    self.bestLapTimeMs = self.previousLapTimeMs
+                elseif self.bestLapTimeMs > self.previousLapTimeMs then
+                    self.bestLapTimeMs = self.previousLapTimeMs
+                end
             end
         end
         self.lapTimeMs = lapTimeMs

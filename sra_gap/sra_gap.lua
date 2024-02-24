@@ -6,6 +6,7 @@ local config = Settings()
 
 local isInitialized = false
 local CARS = {}
+local connectedCar = 0;
 local sf = string.format
 local counter = 0
 local currentSessionIndex = 0
@@ -59,7 +60,11 @@ local function drawList(car, gap, pos)
     ui.sameLine()
   end
   if config.lastLap then
-    drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, fontColor, rgbm.colors.cyan, ui.Alignment.End)
+    if car.isLastLapValid then
+      drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, fontColor, rgbm.colors.cyan, ui.Alignment.End)
+    else
+      drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, rgbm.colors.red, rgbm.colors.cyan, ui.Alignment.End)
+    end
     ui.sameLine()
   end
   if config.tyres then
@@ -78,9 +83,10 @@ function script.windowMain(dt)
   local pos = ac.getCar(0).racePosition
   local show = config.carCount
   local nombre = math.max(pos - show, 1)
-  local min = math.max(math.min(nombre, #CARS + 1), 0)
-  local max = math.max(math.min(min + (show + show), #CARS), 0)
-
+  --  local min = math.max(math.min(nombre, connectedCar), 0)
+  local min = math.max(nombre, 1)
+  --local max = math.max(math.min(min + (show + show), connectedCar), 0)
+  local max = math.min(pos + show, connectedCar)
   ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
   for i = min, max do
     if CARS[i].isActive then
@@ -107,7 +113,7 @@ end
 function script.windowSetting(dt)
   config.scale = ui.slider('##Scale', config.scale, 1.0, 3.0, 'Scale: %1.1f')
 
-  config.carCount = ui.slider('##CarCount', config.carCount, 1.0, 25.0, 'car: %1.0f')
+  config.carCount = ui.slider('##CarCount', config.carCount, 1.0, 40.0, 'car: %1.0f')
 
   if ui.checkbox("Show Best Lap", config.bestLap) then
     config.bestLap = not config.bestLap
@@ -140,9 +146,12 @@ function script.update(dt)
   if sim.isSessionStarted then
     isSessionStarted = true
   end
-
+  connectedCar = 0
   for i = 0, #CARS - 1 do
     CARS[i + 1]:update(dt, ac.getCar(CARS[i + 1].id))
+    if CARS[i + 1].isActive then
+      connectedCar = connectedCar + 1
+    end
   end
   local raceSessionType = ac.getSim().raceSessionType
   if counter > 0.4 then
