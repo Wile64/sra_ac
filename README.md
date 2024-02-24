@@ -83,7 +83,6 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 </ul>
 
 ## sra_hud
-<p><img src="gap.png" /></p>
 
 **Plusieus petits affichages .**
 
