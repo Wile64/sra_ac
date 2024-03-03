@@ -34,9 +34,9 @@ local function setimer()
 end
 function script.windowMain(dt)
   local cameraView = {
-    { 'Cockpit',              ac.CameraMode.Cockpit },
+    { 'Cockpit (F1)',              ac.CameraMode.Cockpit },
     { 'Car (F6)',             ac.CameraMode.Car },
-    { 'Drivable',             ac.CameraMode.Drivable },
+    { 'Drivable (F1)',             ac.CameraMode.Drivable },
     { 'Track',                ac.CameraMode.Track },
     { 'Helicopter',           ac.CameraMode.Helicopter },
     { 'OnBoardFree (F5)',     ac.CameraMode.OnBoardFree },
@@ -54,6 +54,15 @@ function script.windowMain(dt)
 
   local car = ac.getCar(ac.getSim().focusedCar)
   ui.columns(2, false, '#col')
+
+  ui.header('Drivers:')
+  ui.combo('##Drivers', ac.getDriverName(ac.getSim().focusedCar), ui.ComboFlags.HeightChubby, function()
+    for i = 0, ac.getSim().carsCount - 1 do
+      if ui.selectable(ac.getDriverName(i)) then
+        ac.focusCar(i)
+      end
+    end
+  end)
   ui.header('Focused:')
   drawKeyValue("- Driver Name: ", ac.getDriverName(ac.getSim().focusedCar))
   drawKeyValue("- Driver Number: ", string.format("%d", ac.getDriverNumber(ac.getSim().focusedCar)))
