@@ -107,6 +107,19 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Couleur de texte</li>
 </ul>
 
+## sra_camera
+<p><img src="camera.png" /></p>
+
+**Petit outil pour changer de camera.**
+
+<ul>
+<li>Changer de vue facilement avec les controles de droite</li>
+<li>Aide des controles de la vue si disponible</li>
+<li>Bouton pour activer le changement de vue alétoire</li>
+<li>Changement du timer aléatoire de 2 a 60 secondes</li>
+<li>Information sur la voiture/pilote selectionné</li>
+</ul>
+
 ## Comment Utiliser
 
 Copiez les fichiers de l'application souhaitée dans le dossier app/lua de votre installation d'Assetto Corsa.
