@@ -14,17 +14,29 @@ local function drawKeyValue(key, value)
 end
 
 local function randomCamera()
-  local camera = math.random(0, 5)
-  if camera == ac.CameraMode.Car then
-    local view = math.random(0, ac.getCar(ac.getSim().focusedCar).carCamerasCount - 1)
-    ac.setCurrentCamera(ac.CameraMode.Car)
-    ac.setCurrentCarCamera(view)
-  elseif camera == ac.CameraMode.Track then
-    local view = math.random(0, ac.getSim().trackCamerasSetsCount - 1)
-    ac.setCurrentCamera(ac.CameraMode.Track)
-    ac.setCurrentCarCamera(view)
+  local viewList = {
+    { 0, { ac.CameraMode.Cockpit, -1 } },
+    { 1, { ac.CameraMode.Drivable, -1 } },
+    { 2, { ac.CameraMode.Helicopter, -1 } },
+    { 3, { ac.CameraMode.OnBoardFree, -1 } }
+  }
+
+  for i = 0, ac.getSim().trackCamerasSetsCount - 1 do
+    table.insert(viewList, { #viewList, { ac.CameraMode.Track, i } })
+  end
+  for i = 0, ac.getCar(ac.getSim().focusedCar).carCamerasCount - 1 do
+    table.insert(viewList, { #viewList, { ac.CameraMode.Car, i } })
+  end
+  math.randomseed(os.time())
+  local camera = math.random(1, #viewList)
+  ac.log(string.format("current %d max %d", camera, #viewList))
+  ac.log(string.format("cam %d vue %d", viewList[camera][2][1], viewList[camera][2][2]))
+
+  if viewList[camera][2][2] == -1 then
+    ac.setCurrentCamera(viewList[camera][2][1])
   else
-    ac.setCurrentCamera(math.random(0, 5))
+    ac.setCurrentCamera(viewList[camera][2][1])
+    ac.setCurrentCarCamera(viewList[camera][2][2])
   end
 end
 
@@ -34,9 +46,9 @@ local function setimer()
 end
 function script.windowMain(dt)
   local cameraView = {
-    { 'Cockpit (F1)',              ac.CameraMode.Cockpit },
+    { 'Cockpit (F1)',         ac.CameraMode.Cockpit },
     { 'Car (F6)',             ac.CameraMode.Car },
-    { 'Drivable (F1)',             ac.CameraMode.Drivable },
+    { 'Drivable (F1)',        ac.CameraMode.Drivable },
     { 'Track',                ac.CameraMode.Track },
     { 'Helicopter',           ac.CameraMode.Helicopter },
     { 'OnBoardFree (F5)',     ac.CameraMode.OnBoardFree },
