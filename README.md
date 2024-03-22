@@ -122,9 +122,11 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 
 ## Comment Utiliser
 
-Copiez les fichiers de l'application souhaitée dans le dossier app/lua de votre installation d'Assetto Corsa.
-
-Lancez Assetto Corsa et profitez de votre nouvelle fonctionnalité !
+1. Cliquez sur le bouton vert "Code" en haut à droite de la page.
+2. Cliquez sur l'option "Download ZIP".
+3. Une fois le téléchargement terminé, ouvrez le fichier zip.
+4. Copiez le dossier de l'application souhaitée dans le dossier apps/lua de votre installation d'Assetto Corsa.
+5. Démarrez Assetto Corsa et profitez de votre nouvelle fonctionnalité !
 
 >Contribution
 >Si vous souhaitez contribuer à ce projet, n'hésitez pas à envoyer des pull requests. 
