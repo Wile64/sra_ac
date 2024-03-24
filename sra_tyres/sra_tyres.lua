@@ -24,6 +24,12 @@ local discInfos = {
 
 local loadedDiscInfo = false
 
+local tyrewheelLocks = {}
+table.insert(tyrewheelLocks, 0, { wheelLock = false, flatSpotValue = 0 })
+table.insert(tyrewheelLocks, 1, { wheelLock = false, flatSpotValue = 0 })
+table.insert(tyrewheelLocks, 2, { wheelLock = false, flatSpotValue = 0 })
+table.insert(tyrewheelLocks, 3, { wheelLock = false, flatSpotValue = 0 })
+
 local function progressBarV(progress, rectSize, color)
   progress = math.min(math.max(progress, 0), 1) -- Assurez-vous que la valeur est dans la plage 0-1
 
@@ -202,26 +208,40 @@ local function drawTyreLeft(tyre, rectSize, front)
   ui.beginRotation()
   local startPosition = ui.getCursor()
   local startCore = vec2(startPosition.x + 1, startPosition.y + 3)
-
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    getTyreColor(tyre.tyreInsideTemperature, tyre.tyreOptimumTemperature), 4)
   if tyre.ndSlip > 1 then
-    ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+    ui.drawRectFilled(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+    startPosition.x = startPosition.x + rectSize.x + 1
+    ui.drawRectFilled(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+    startPosition.x = startPosition.x + rectSize.x + 1
+    ui.drawRectFilled(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+  else
+    ui.drawRectFilled(startPosition, startPosition + rectSize,
+      getTyreColor(tyre.tyreInsideTemperature, tyre.tyreOptimumTemperature), 4)
+    startPosition.x = startPosition.x + rectSize.x + 1
+    ui.drawRectFilled(startPosition, startPosition + rectSize,
+      getTyreColor(tyre.tyreMiddleTemperature, tyre.tyreOptimumTemperature), 3)
+    startPosition.x = startPosition.x + rectSize.x + 1
+    ui.drawRectFilled(startPosition, startPosition + rectSize,
+      getTyreColor(tyre.tyreOutsideTemperature, tyre.tyreOptimumTemperature), 4)
   end
-  startPosition.x = startPosition.x + rectSize.x + 1
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    getTyreColor(tyre.tyreMiddleTemperature, tyre.tyreOptimumTemperature), 3)
-  if tyre.ndSlip > 1 then
-    ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+  local tyreLeft = 2
+  if front then
+    tyreLeft = 0
   end
-  startPosition.x = startPosition.x + rectSize.x + 1
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    getTyreColor(tyre.tyreOutsideTemperature, tyre.tyreOptimumTemperature), 4)
-
+  if tyrewheelLocks[tyreLeft].flatSpotValue ~= tyre.tyreFlatSpot then
+    tyrewheelLocks[tyreLeft].flatSpotValue = tyre.tyreFlatSpot
+    tyrewheelLocks[tyreLeft].wheelLock = true
+  else
+    tyrewheelLocks[tyreLeft].wheelLock = false
+  end
   local tyreImage = ".//images//core.png"
   local size = vec2(rectSize.x * 3, rectSize.y - 10)
-  ui.drawImage(tyreImage, startCore, startCore + size,
-    getTyreColor(tyre.tyreCoreTemperature, tyre.tyreOptimumTemperature))
+  if tyrewheelLocks[tyreLeft].wheelLock then
+    ui.drawImage(tyreImage, startCore, startCore + size, rgbm.colors.white)
+  else
+    ui.drawImage(tyreImage, startCore, startCore + size,
+      getTyreColor(tyre.tyreCoreTemperature, tyre.tyreOptimumTemperature))
+  end
 
   if showDiscTemp and config.showDisc then
     local discPosition = startPosition + vec2(18 * config.Scale, 15 * config.Scale)
@@ -233,9 +253,7 @@ local function drawTyreLeft(tyre, rectSize, front)
         getDiscColor(tyre.discTemperature, false), 4, false)
     end
   end
-  if tyre.ndSlip > 1 then
-    ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
-  end
+
   if tyre.tyreDirty > 0 then
     local durtySize = vec2(rectSize.x, rectSize.y * (tyre.tyreDirty / 5.0))
     local startDurty = ui.getCursor()
@@ -291,7 +309,7 @@ local function drawTyreRight(tyre, rectSize, front)
     end)
   end
   ui.sameLine()
-  ui.setCursorX(ui.getCursorX()+1)
+  ui.setCursorX(ui.getCursorX() + 1)
   ui.beginGroup()
   if config.showToeIn then
     toeIn(tyre.toeIn, vec2(rectSize.x * 3, 10 * config.Scale), rgbm.colors.cyan)
@@ -312,27 +330,41 @@ local function drawTyreRight(tyre, rectSize, front)
 
   local discPosition = startPosition + vec2(-6 * config.Scale, 15 * config.Scale)
 
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    getTyreColor(tyre.tyreInsideTemperature, tyre.tyreOptimumTemperature), 4)
   if tyre.ndSlip > 1 then
-    ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+    ui.drawRectFilled(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+    startPosition.x = startPosition.x + rectSize.x + 1
+    ui.drawRectFilled(startPosition, startPosition + rectSize, rgbm.colors.orange, 3)
+    startPosition.x = startPosition.x + rectSize.x + 1
+    ui.drawRectFilled(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+  else
+    ui.drawRectFilled(startPosition, startPosition + rectSize,
+      getTyreColor(tyre.tyreInsideTemperature, tyre.tyreOptimumTemperature), 4)
+    startPosition.x = startPosition.x + rectSize.x + 1
+    ui.drawRectFilled(startPosition, startPosition + rectSize,
+      getTyreColor(tyre.tyreMiddleTemperature, tyre.tyreOptimumTemperature), 3)
+    startPosition.x = startPosition.x + rectSize.x + 1
+    ui.drawRectFilled(startPosition, startPosition + rectSize,
+      getTyreColor(tyre.tyreOutsideTemperature, tyre.tyreOptimumTemperature), 4)
   end
-  startPosition.x = startPosition.x + rectSize.x + 1
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    getTyreColor(tyre.tyreMiddleTemperature, tyre.tyreOptimumTemperature), 3)
-  if tyre.ndSlip > 1 then
-    ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+
+  local tyreRight = 3
+  if front then
+    tyreRight = 1
   end
-  startPosition.x = startPosition.x + rectSize.x + 1
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    getTyreColor(tyre.tyreOutsideTemperature, tyre.tyreOptimumTemperature), 4)
-  if tyre.ndSlip > 1 then
-    ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.orange, 4)
+  if tyrewheelLocks[tyreRight].flatSpotValue ~= tyre.tyreFlatSpot then
+    tyrewheelLocks[tyreRight].flatSpotValue = tyre.tyreFlatSpot
+    tyrewheelLocks[tyreRight].wheelLock = true
+  else
+    tyrewheelLocks[tyreRight].wheelLock = false
   end
   local tyreImage = ".//images//core.png"
   local size = vec2(rectSize.x * 3, rectSize.y - 10)
-  ui.drawImage(tyreImage, startCore, startCore + size,
-    getTyreColor(tyre.tyreCoreTemperature, tyre.tyreOptimumTemperature))
+  if tyrewheelLocks[tyreRight].wheelLock then
+    ui.drawImage(tyreImage, startCore, startCore + size, rgbm.colors.white)
+  else
+    ui.drawImage(tyreImage, startCore, startCore + size,
+      getTyreColor(tyre.tyreCoreTemperature, tyre.tyreOptimumTemperature))
+  end
 
   if tyre.tyreDirty > 0 then
     local durtySize = vec2(rectSize.x, rectSize.y * (tyre.tyreDirty / 5.0))
