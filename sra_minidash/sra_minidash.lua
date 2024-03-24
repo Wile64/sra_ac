@@ -4,6 +4,7 @@
 
 -- https://github.com/ac-custom-shaders-patch/acc-lua-sdk/blob/main/.definitions/ac_common.txt
 
+VERSION = 1.155
 require('classes/carsra')
 local car = CarSRA()
 require('classes/settings')
@@ -61,6 +62,7 @@ local function progressBarH(progress, rectSize, color)
 end
 
 function script.windowMain(dt)
+  ac.setWindowTitle('windowMain', string.format('SRA Mini Dash v%2.3f', VERSION))
   local drawOffset = ui.getCursor()
   local contentSize = ui.windowSize():sub(drawOffset)
   display.rect({ pos = drawOffset, size = contentSize, color = config.BackgroundColor })

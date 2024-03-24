@@ -4,6 +4,7 @@
 
 -- https://github.com/ac-custom-shaders-patch/acc-lua-sdk/blob/main/.definitions/ac_common.txt
 
+VERSION = 1.001
 local randomTimer = 5.0
 local randomTimerOn = false
 local timerKey = 0
@@ -45,6 +46,7 @@ local function setimer()
   timerKey = setInterval(function() if randomTimerOn then randomCamera() end end, randomTimer, '#timer')
 end
 function script.windowMain(dt)
+  ac.setWindowTitle('windowMain', string.format('SRA Camera v%2.3f', VERSION))
   local cameraView = {
     { 'Cockpit (F1)',         ac.CameraMode.Cockpit },
     { 'Car (F6)',             ac.CameraMode.Car },
@@ -70,8 +72,10 @@ function script.windowMain(dt)
   ui.header('Drivers:')
   ui.combo('##Drivers', ac.getDriverName(ac.getSim().focusedCar), ui.ComboFlags.HeightChubby, function()
     for i = 0, ac.getSim().carsCount - 1 do
-      if ui.selectable(ac.getDriverName(i)) then
-        ac.focusCar(i)
+      if ac.getCar(i).isConnected then
+        if ui.selectable(ac.getDriverName(i)) then
+          ac.focusCar(i)
+        end
       end
     end
   end)

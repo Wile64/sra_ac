@@ -1,6 +1,7 @@
 --
 -- Created by Wile64 on december 2023
 --
+VERSION = 1.102
 
 require('classes/settings')
 local config = Settings()
@@ -25,6 +26,7 @@ local function getColor(value)
 end
 
 function script.windowMain(dt)
+  ac.setWindowTitle('windowMain', string.format('SRA Damage v%2.3f', VERSION))
   ui.pushDWriteFont('OneSlot:\\fonts\\.')
   local carState = ac.getCar(ac.getSim().focusedCar)
   if carState == nil then return end

@@ -1,6 +1,7 @@
 require('classes/settings')
 require('classes/car')
 
+VERSION = 1.123
 local config = Settings()
 
 
@@ -43,35 +44,85 @@ local function drawLine(text, lenght, fontColor, bgColor, align)
   ui.dummy(vec2(lenght, height))
 end
 
-local function drawList(car, gap, pos)
+local function drawMyCar(car, gap, pos)
   ui.pushDWriteFont('OneSlot:\\fonts\\.')
   local fontColor = rgbm.colors.white
-  if not car.isActive then
-    fontColor = rgbm.colors.gray
-  end
+
+  local backColor = rgbm.colors.gray
   drawLine(sf("%02d", pos), 25, fontColor, rgbm.colors.red, ui.Alignment.Center)
   ui.sameLine()
-  drawLine(car.nickName, 150, fontColor, rgbm.colors.cyan, ui.Alignment.Start)
+  drawLine(car.nickName, 150, fontColor, backColor, ui.Alignment.Start)
   ui.sameLine()
-  drawLine(sf("%02d", car.laps), 30, fontColor, rgbm.colors.cyan, ui.Alignment.Center)
+  drawLine(sf("%02d", car.laps), 30, fontColor, backColor, ui.Alignment.Center)
   ui.sameLine()
   if config.bestLap then
-    drawLine(ac.lapTimeToString(car.bestLapTimeMs), 70, fontColor, rgbm.colors.cyan, ui.Alignment.End)
+    drawLine(ac.lapTimeToString(car.bestLapTimeMs), 70, fontColor, backColor, ui.Alignment.End)
     ui.sameLine()
   end
   if config.lastLap then
     if car.isLastLapValid then
-      drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, fontColor, rgbm.colors.cyan, ui.Alignment.End)
+      drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, fontColor, backColor, ui.Alignment.End)
     else
-      drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, rgbm.colors.red, rgbm.colors.cyan, ui.Alignment.End)
+      drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, rgbm.colors.red, backColor, ui.Alignment.End)
     end
     ui.sameLine()
   end
+  if gap == '' then
+    drawLine(gap, 70, fontColor, backColor, ui.Alignment.End)
+  else
+    if gap < '1' then
+      drawLine(gap, 70, fontColor, rgbm.colors.maroon, ui.Alignment.End)
+    else
+      drawLine(gap, 70, fontColor, rgbm.colors.olive, ui.Alignment.End)
+    end
+  end
   if config.tyres then
+    ui.sameLine()
     drawLine(car.tyreName, 30, fontColor, rgbm.colors.gray, ui.Alignment.Center)
+  end
+  if car.inPit then
+    ui.sameLine()
+    drawLine("P", 20, rgbm.colors.black, rgbm.colors.white, ui.Alignment.Center)
+  end
+  ui.popDWriteFont()
+end
+
+local function drawList(car, gap, pos)
+  ui.pushDWriteFont('OneSlot:\\fonts\\.')
+  local fontColor = rgbm.colors.white
+  local backColor = rgbm.colors.black
+
+  drawLine(sf("%02d", pos), 25, rgbm.colors.black, rgbm.colors.white, ui.Alignment.Center)
+  ui.sameLine()
+  drawLine(car.nickName, 150, fontColor, backColor, ui.Alignment.Start)
+  ui.sameLine()
+  drawLine(sf("%02d", car.laps), 30, fontColor, backColor, ui.Alignment.Center)
+  ui.sameLine()
+  if config.bestLap then
+    drawLine(ac.lapTimeToString(car.bestLapTimeMs), 70, fontColor, backColor, ui.Alignment.End)
     ui.sameLine()
   end
-  drawLine(gap, 70, fontColor, rgbm.colors.orange, ui.Alignment.End)
+  if config.lastLap then
+    if car.isLastLapValid then
+      drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, fontColor, backColor, ui.Alignment.End)
+    else
+      drawLine(ac.lapTimeToString(car.previousLapTimeMs), 70, rgbm.colors.red, backColor, ui.Alignment.End)
+    end
+    ui.sameLine()
+  end
+  if gap == '' then
+    drawLine(gap, 70, fontColor, backColor, ui.Alignment.End)
+  else
+    if gap < '1' then
+      drawLine(gap, 70, fontColor, rgbm.colors.maroon, ui.Alignment.End)
+    else
+      drawLine(gap, 70, fontColor, rgbm.colors.olive, ui.Alignment.End)
+    end
+  end
+  if config.tyres then
+    ui.sameLine()
+    drawLine(car.tyreName, 30, fontColor, rgbm.colors.gray, ui.Alignment.Center)
+  end
   if car.inPit then
     ui.sameLine()
     drawLine("P", 20, rgbm.colors.black, rgbm.colors.white, ui.Alignment.Center)
@@ -80,6 +131,7 @@ local function drawList(car, gap, pos)
 end
 
 function script.windowMain(dt)
+  ac.setWindowTitle('windowGap', string.format('SRA Gap v%2.3f', VERSION))
   local pos = ac.getCar(0).racePosition
   local show = config.carCount
   local nombre = math.max(pos - show, 1)
@@ -104,7 +156,11 @@ function script.windowMain(dt)
           end
         end
       end
-      drawList(CARS[i], gap, i)
+      if CARS[i].id == 0 then
+        drawMyCar(CARS[i], gap, i)
+      else
+        drawList(CARS[i], gap, i)
+      end
     end
   end
   ui.popStyleVar()
@@ -124,7 +180,6 @@ function script.windowSetting(dt)
   if ui.checkbox("Show Tyres", config.tyres) then
     config.tyres = not config.tyres
   end
-
   ui.separator()
   ui.setCursorX(210)
   if ui.iconButton(ui.Icons.Save, vec2(50, 0), 0, true, ui.ButtonFlags.Activable) then

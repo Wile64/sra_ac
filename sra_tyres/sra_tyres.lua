@@ -5,6 +5,7 @@
 
 require('classes/settings')
 require('classes/carsra')
+VERSION = 1.205
 local carState = CarSRA()
 local config = Settings()
 
@@ -500,6 +501,7 @@ local function loadDiscInfo()
 end
 
 function script.windowMain(dt)
+  ac.setWindowTitle('windowMain', string.format('SRA Tyres v%2.3f', VERSION))
   if not loadedDiscInfo then
     loadDiscInfo()
   end
@@ -685,7 +687,7 @@ function script.windowSetting(dt)
     config.showDisc = not config.showDisc
   end
   ui.separator()
-  ui.setCursorX(210)
+  ui.sameLine(200)
   if ui.iconButton(ui.Icons.Save, vec2(50, 0), 0, true, ui.ButtonFlags.Activable) then
     config:save()
   end
