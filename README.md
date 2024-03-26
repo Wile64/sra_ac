@@ -30,6 +30,8 @@
 <li>Pincement des roues (ToeIn)</li>
 <li>Carrossage des roues (Camber)</li>
 <li>Température des disques si disponible</li>
+<li>Affichage de roue qui glisses ou patines, l'extérieur du pneu devient orange</li>
+<li>Affichage du blocage de roue , l'intérieur du pneu devient blanc</li>
 <li>Options et zoom disponible</li>
 </ul>
 
@@ -128,7 +130,7 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <ul>
 <li>Appliquer le setup par défaut</li>
 <li>Charger un fichier setup</li>
-<li>Comparer les valeurs differentes par rapport au setup courant</li>
+<li>Comparer les valeurs différentes par rapport au setup courant</li>
 <li>Petit bouton (flèche) pour appliqué la valeur (ne marche pas sur tout, bug CSP)</li>
 </ul>
 
