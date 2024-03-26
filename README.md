@@ -130,6 +130,7 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <ul>
 <li>Appliquer le setup par défaut</li>
 <li>Charger un fichier setup</li>
+<li>Appliquer le setup du fichier</li>
 <li>Comparer les valeurs différentes par rapport au setup courant</li>
 <li>Petit bouton (flèche) pour appliqué la valeur (ne marche pas sur tout, bug CSP)</li>
 </ul>
