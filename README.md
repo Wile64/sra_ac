@@ -120,6 +120,18 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Information sur la voiture/pilote selectionné</li>
 </ul>
 
+## sra_setup
+<p><img src="setup.png" /></p>
+
+**Petit outil pour comparer un fichier setup.**
+
+<ul>
+<li>Appliquer le setup par défaut</li>
+<li>Charger un fichier setup</li>
+<li>Comparer les valeurs differentes par rapport au setup courant</li>
+<li>Petit bouton (flèche) pour appliqué la valeur (ne marche pas sur tout, bug CSP)</li>
+</ul>
+
 ## Comment Utiliser
 
 1. Cliquez sur le bouton vert "Code" en haut à droite de la page.
