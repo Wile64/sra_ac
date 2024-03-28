@@ -1,6 +1,6 @@
 require('classes/setup')
 
-VERSION = 0.99
+VERSION = 0.991
 FONTSIZE = 12
 
 local dirSetup = ac.getFolder(ac.FolderID.UserSetups)
