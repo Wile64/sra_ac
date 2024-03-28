@@ -28,6 +28,12 @@ function CarSetup:LoadFromFile(fileName)
     end
 end
 
+function CarSetup:reset()
+    if self.isLoaded then
+        self.setupList = nil
+        self.isLoaded = false
+    end
+end
 ---Get the setup list
 ---@return table|boolean
 function CarSetup:getValueList()

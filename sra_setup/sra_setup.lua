@@ -1,6 +1,7 @@
 require('classes/setup')
 
 VERSION = 0.99
+FONTSIZE = 12
 
 local dirSetup = ac.getFolder(ac.FolderID.UserSetups)
 local carName = ac.getCarID(0)
@@ -13,22 +14,47 @@ local CurrentSetupFile = ''
 
 defaultSetup:GetCurrentSetup()
 
-FONTSIZE = 12
-
-local function listFilesInDirectory(directory)
-  local command = 'dir "' .. directory .. '" /b'
-  local file = io.popen(command)
-  local fileList = {}
-  for filename in file:lines() do
-    if filename:match("%.ini$") then
-      table.insert(fileList, filename)
-    end
-  end
-  file:close()
-  return fileList
-end
-
-local files = listFilesInDirectory(dirSetup .. '\\' .. carName .. '\\' .. trackName)
+local knownNames = {
+  ['FUEL'] = 'Fuel',
+  ['BRAKE_POWER_MULT'] = 'Brake power',
+  ['ENGINE_LIMITER'] = 'Engine limiter',
+  ['FRONT_BIAS'] = 'Brake bias',
+  ['FINAL_RATIO'] = 'Final gear ratio',
+  ['GEARSET'] = 'Gear set',
+  ['ARB_FRONT'] = 'ARB (front)',
+  ['ARB_REAR'] = 'ARB (rear)',
+  ['PRESSURE_LF'] = 'Tyre pressure (left front)',
+  ['PRESSURE_LR'] = 'Tyre pressure (left rear)',
+  ['PRESSURE_RF'] = 'Tyre pressure (right front)',
+  ['PRESSURE_RR'] = 'Tyre pressure (right rear)',
+  ['ROD_LENGTH_LR'] = 'Suspension height (left rear)',
+  ['ROD_LENGTH_LF'] = 'Suspension height (left front)',
+  ['ROD_LENGTH_RF'] = 'Suspension height (right front)',
+  ['ROD_LENGTH_RR'] = 'Suspension height (right rear)',
+  ['SPRING_RATE_LF'] = 'Suspension wheel rate (left front)',
+  ['SPRING_RATE_LR'] = 'Suspension wheel rate (left rear)',
+  ['SPRING_RATE_RF'] = 'Suspension wheel rate (right front)',
+  ['SPRING_RATE_RR'] = 'Suspension wheel rate (right rear)',
+  ['TOE_OUT_LF'] = 'Toe (left front)',
+  ['TOE_OUT_LR'] = 'Toe (left rear)',
+  ['TOE_OUT_RF'] = 'Toe (right front)',
+  ['TOE_OUT_RR'] = 'Toe (right rear)',
+  ['CAMBER_LF'] = 'Camber (left front)',
+  ['CAMBER_LR'] = 'Camber (left rear)',
+  ['CAMBER_RF'] = 'Camber (right front)',
+  ['CAMBER_RR'] = 'Camber (right rear)',
+  ['INTERNAL_GEAR_2'] = 'First gear',
+  ['INTERNAL_GEAR_3'] = 'Second gear',
+  ['INTERNAL_GEAR_4'] = 'Third gear',
+  ['INTERNAL_GEAR_5'] = 'Fourth gear',
+  ['INTERNAL_GEAR_6'] = 'Fifth gear',
+  ['INTERNAL_GEAR_7'] = 'Sixth gear',
+  ['TRACTION_CONTROL'] = 'Traction control',
+  ['PACKER_RANGE_LF'] = 'Travel range (left front)',
+  ['PACKER_RANGE_LR'] = 'Travel range (left rear)',
+  ['PACKER_RANGE_RF'] = 'Travel range (right front)',
+  ['PACKER_RANGE_RR'] = 'Travel range (right rear)',
+}
 
 local function pairsByKeys(t, f)
   local a = {}
@@ -57,6 +83,8 @@ function script.windowMain(dt)
     ac.resetSetupToDefault(dirSetup .. '\\' .. carName)
   end
 
+
+
   if ui.button('load Setup File', ui.ButtonFlags.Active) then
     os.openFileDialog({
       title = 'Open Setup',
@@ -71,9 +99,15 @@ function script.windowMain(dt)
   end
   ui.sameLine()
   ui.dwriteText(string.format('File: %s', CurrentSetupFile), FONTSIZE, rgbm.colors.white)
+
   if fileSetup.isLoaded then
     if ui.button('Apply File Setup', ui.ButtonFlags.Active) then
       ac.loadSetup(dirSetup .. '\\' .. carName .. '\\' .. trackName .. '\\' .. CurrentSetupFile)
+    end
+    ui.sameLine()
+    if ui.button('Unload setup file', ui.ButtonFlags.Active) then
+      CurrentSetupFile = ''
+      fileSetup:reset()
     end
     ui.newLine()
     carSetup:GetCurrentSetup()
@@ -91,7 +125,7 @@ function script.windowMain(dt)
       for k, v in pairsByKeys(list) do
         if carSetup:getValue(k) ~= false then
           if carSetup:getValue(k) ~= v then
-            ui.dwriteText(string.format('%s', k), FONTSIZE, rgbm.colors.white)
+            ui.dwriteText(string.format('%s', knownNames[k] or k), FONTSIZE, rgbm.colors.white)
             ui.nextColumn()
             ui.dwriteText(string.format('%02d ', v), FONTSIZE, rgbm.colors.fuchsia)
             ui.sameLine()
@@ -105,9 +139,11 @@ function script.windowMain(dt)
             ui.dwriteText(string.format('%02d', carSetup:getValue(k)), FONTSIZE, rgbm.colors.red)
             ui.nextColumn()
             ui.dwriteText(string.format('%02d', defaultSetup:getValue(k)), FONTSIZE, rgbm.colors.white)
-            ui.sameLine()
-            if ui.arrowButton('def' .. k, ui.Direction.Right, vec2(15, 15), ui.ButtonFlags.Active) then
-              carSetup:applySetupValue(k, defaultSetup:getValue(k))
+            if defaultSetup:getValue(k) ~= carSetup:getValue(k) then
+              ui.sameLine()
+              if ui.arrowButton('def' .. k, ui.Direction.Right, vec2(15, 15), ui.ButtonFlags.Active) then
+                carSetup:applySetupValue(k, defaultSetup:getValue(k))
+              end
             end
             ui.nextColumn()
           end
