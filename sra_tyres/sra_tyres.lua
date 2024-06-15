@@ -6,7 +6,7 @@
 require('classes/settings')
 require('classes/carsra')
 VERSION = 1.205
-local carState = CarSRA()
+local carInfo = CarSRA()
 local config = Settings()
 
 local showDiscTemp = false
@@ -267,9 +267,9 @@ local function drawTyreLeft(tyre, rectSize, front)
   end
   local avg = 0
   if front then
-    avg = tyre.tyrePressure - carState.idealFrontPressure
+    avg = tyre.tyrePressure - carInfo.idealFrontPressure
   else
-    avg = tyre.tyrePressure - carState.idealRearPressure
+    avg = tyre.tyrePressure - carInfo.idealRearPressure
   end
   local infos = string.format("Core %d°\n%.1f PSI\n%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
   if avg >= 0 then
@@ -389,9 +389,9 @@ local function drawTyreRight(tyre, rectSize, front)
 
   local avg = 0
   if front then
-    avg = tyre.tyrePressure - carState.idealFrontPressure
+    avg = tyre.tyrePressure - carInfo.idealFrontPressure
   else
-    avg = tyre.tyrePressure - carState.idealRearPressure
+    avg = tyre.tyrePressure - carInfo.idealRearPressure
   end
   local infos = string.format("Core %d°\n%.1f PSI\n%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
   if avg >= 0 then
@@ -513,29 +513,29 @@ function script.windowMain(dt)
   local tyreSize = vec2(18 * config.Scale, 70 * config.Scale)
 
   if config.showTyreName then
-    ui.dwriteText(string.format("Tyre : %s", ac.getTyresLongName(0, carState.carState.compoundIndex)), 10 * config.Scale,
+    ui.dwriteText(string.format("Tyre : %s", ac.getTyresLongName(0, carInfo.carState.compoundIndex)), 10 * config.Scale,
       rgbm.colors.white)
   end
   if config.showOptimal then
-    ui.dwriteText(string.format("Optimum Temperature : %3.0f°", carState:getTyreFL().tyreOptimumTemperature), 10 * config
+    ui.dwriteText(string.format("Optimum Temperature : %3.0f°", carInfo:getTyreFL().tyreOptimumTemperature), 10 * config
       .Scale, rgbm.colors.white)
   end
   ui.separator()
 
-  drawTyreLeft(carState:getTyreFL(), tyreSize, true)
+  drawTyreLeft(carInfo:getTyreFL(), tyreSize, true)
   ui.sameLine()
-  drawTyreRight(carState:getTyreFR(), tyreSize, true)
+  drawTyreRight(carInfo:getTyreFR(), tyreSize, true)
   ui.separator()
 
-  drawTyreLeft(carState:getTyreRL(), tyreSize, false)
+  drawTyreLeft(carInfo:getTyreRL(), tyreSize, false)
   ui.sameLine()
-  drawTyreRight(carState:getTyreRR(), tyreSize, false)
+  drawTyreRight(carInfo:getTyreRR(), tyreSize, false)
   ui.popDWriteFont()
 end
 
 function script.update(dt)
-  carState:setCarID(0)
-  carState:update(dt)
+  carInfo:setCarID(0)
+  carInfo:update(dt)
   if ac.getSim().isInMainMenu then
     ac.setWindowOpen("windowSetup", true)
   end
@@ -557,9 +557,9 @@ local function showTyreInfo(tyre, front)
   inline("- Pressure:", string.format("%2.2f PSI", tyre.tyrePressure))
   local avg = 0
   if front then
-    avg = tyre.tyrePressure - carState.idealFrontPressure
+    avg = tyre.tyrePressure - carInfo.idealFrontPressure
   else
-    avg = tyre.tyrePressure - carState.idealRearPressure
+    avg = tyre.tyrePressure - carInfo.idealRearPressure
   end
   local infos = string.format("%0.1f", avg)
   if avg >= 0 then
@@ -579,18 +579,18 @@ local function tabTyres()
 
   ui.columns(2, false, "##TyreTable")
   ui.dwriteText("Front left", 15, rgbm.colors.orange)
-  showTyreInfo(carState:getTyreFL())
+  showTyreInfo(carInfo:getTyreFL())
   ui.nextColumn()
   ui.dwriteText("Front right", 15, rgbm.colors.orange)
-  showTyreInfo(carState:getTyreFR())
+  showTyreInfo(carInfo:getTyreFR())
   ui.nextColumn()
   ui.newLine()
   ui.dwriteText("Rear left", 15, rgbm.colors.orange)
-  showTyreInfo(carState:getTyreRL())
+  showTyreInfo(carInfo:getTyreRL())
   ui.nextColumn()
   ui.newLine()
   ui.dwriteText("Rear right", 15, rgbm.colors.orange)
-  showTyreInfo(carState:getTyreRR())
+  showTyreInfo(carInfo:getTyreRR())
   ui.nextColumn()
   ui.newLine()
 end
@@ -620,29 +620,29 @@ local function tabAlignment()
   ui.dwriteText("Camber", 15, rgbm.colors.orange)
   ui.separator()
   ui.nextColumn()
-  drawTyre(carState:getTyreFL().camber, true, false)
+  drawTyre(carInfo:getTyreFL().camber, true, false)
   ui.nextColumn()
-  drawTyre(carState:getTyreFR().camber, false, false)
+  drawTyre(carInfo:getTyreFR().camber, false, false)
   ui.nextColumn()
   ui.nextColumn()
   ui.nextColumn()
-  drawTyre(carState:getTyreRL().camber, true, false)
+  drawTyre(carInfo:getTyreRL().camber, true, false)
   ui.nextColumn()
-  drawTyre(carState:getTyreRR().camber, false, false)
+  drawTyre(carInfo:getTyreRR().camber, false, false)
   ui.nextColumn()
   ui.nextColumn()
   ui.dwriteText("ToeIn", 15, rgbm.colors.orange)
   ui.separator()
   ui.nextColumn()
-  drawTyre(carState:getTyreFL().toeIn, true, true)
+  drawTyre(carInfo:getTyreFL().toeIn, true, true)
   ui.nextColumn()
-  drawTyre(carState:getTyreFR().toeIn, false, true)
+  drawTyre(carInfo:getTyreFR().toeIn, false, true)
   ui.nextColumn()
   ui.nextColumn()
   ui.nextColumn()
-  drawTyre(carState:getTyreRL().toeIn, true, true)
+  drawTyre(carInfo:getTyreRL().toeIn, true, true)
   ui.nextColumn()
-  drawTyre(carState:getTyreRR().toeIn, false, true)
+  drawTyre(carInfo:getTyreRR().toeIn, false, true)
   ui.newLine()
 end
 

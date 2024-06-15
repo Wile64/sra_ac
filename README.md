@@ -135,6 +135,27 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Petit bouton (flèche) pour appliqué la valeur (ne marche pas sur tout, bug CSP)</li>
 </ul>
 
+## sra_ffb
+<p><img src="sra_ffb.gif" /></p>
+
+**Petit outil régler le ffb.**
+
+<ul>
+<li>Régler le FFB pour chaque voiture</li>
+<li>Selon le circuit le FFB peut être modifié</li>
+<li>FFB Max, indique la valeur maximun lors d'un tours et peut être réinialisé</li>
+</ul>
+
+## sra_pedals
+<p><img src="sra_pedals.gif" /></p>
+
+**Petit outil pour voir les pédales de frein et d'accélérateur.**
+
+<ul>
+<li>Validé votre gestion des pédales</li>
+<li>Pour l'autoformation</li>
+</ul>
+
 ## Comment Utiliser
 
 1. Cliquez sur le bouton vert "Code" en haut à droite de la page.
