@@ -102,7 +102,7 @@ function script.windowMain(dt)
       clearInterval(timerKey)
     end
   end
-  local newScale = ui.slider('##TimerSlider', randomTimer, 2.0, 60.0, 'Timer: %1.1f%')
+  local newScale = ui.slider('##TimerSlider', randomTimer, 10, 120, 'Timer: %1.0f%')
   if ui.itemEdited() then
     randomTimer = newScale
     setimer()

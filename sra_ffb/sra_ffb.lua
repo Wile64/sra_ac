@@ -15,53 +15,26 @@ local data = {
   PureMax = 0,
 }
 
---local originalFFBGain = tonumber(ac.load('app.ControllerTweaks:originalFFBGain')) or car.ffbMultiplier
-local function userFFBGainSlider()
-  ui.setNextItemWidth(ui.availableSpaceX() - 48)
-  local curValue = ui.slider('##ffb', car.ffbMultiplier * 100, 0, 200, 'Car FFB gain: %.0f%%') / 100
-  ui.sameLine(0, 4)
-  local changed = 1 ~= curValue
-  if ui.button('##ffbResetTo100', vec2(20, 20), changed and ui.ButtonFlags.None or ui.ButtonFlags.Disabled) then
-    curValue = 1
-    data.FinalMax = 0
-  end
-  ui.addIcon(ui.Icons.Cancel, 10, 0.5, nil, 0)
-  if ui.itemHovered() then ui.setTooltip(changed and 'Click to set FFB gain to 100%' or 'Base value: 100%') end
-  ui.sameLine(0, 4)
-  changed = originalFFBGain ~= curValue
-  if ui.button('##ffbReset', vec2(20, 20), changed and ui.ButtonFlags.None or ui.ButtonFlags.Disabled) then
-    curValue = originalFFBGain
-    data.FinalMax = 0
-  end
-  ui.addIcon(ui.Icons.Restart, 10, 0.5, nil, 0)
-  if ui.itemHovered() then
-    ui.setTooltip(string.format(
-      changed and 'Click to restore original FFB gain: %.0f%%' or 'Original value: %.0f%%', originalFFBGain * 100))
-  end
-  if curValue ~= car.ffbMultiplier then
-    ac.setFFBMultiplier(curValue)
-    ac.log(curValue)
-    data.FinalMax = 0
-  end
-end
-
 local function carFFB()
   local currentFFB = car.ffbMultiplier
-  if ui.button('##ffbMinus', vec2(20, 20), changed and ui.ButtonFlags.None) then
-    currentFFB = car.ffbMultiplier - 0.01
-    ac.setFFBMultiplier(currentFFB)
-    data.FinalMax = 0
+  if ui.button('##ffbMinus', vec2(20, 20), ui.ButtonFlags.PressedOnClick and ui.ButtonFlags.Repeat) then
+    if currentFFB > 0 then
+      currentFFB = car.ffbMultiplier - 0.01
+      ac.setFFBMultiplier(currentFFB)
+      data.FinalMax = 0
+    end
   end
   ui.addIcon(ui.Icons.Minus, 10, 0.5, nil, 0)
   ui.sameLine()
-  ui.text(string.format("Car FFB gain %.0f%%", car.ffbMultiplier *100 ))
+  ui.text(string.format("Car FFB gain %.2f%%", currentFFB * 100))
   ui.sameLine()
-  if ui.button('##ffbPlus', vec2(20, 20), changed and ui.ButtonFlags.None) then
-    currentFFB = car.ffbMultiplier + 0.01
-    ac.setFFBMultiplier(currentFFB)
-    data.FinalMax = 0
+  if ui.button('##ffbPlus', vec2(20, 20), ui.ButtonFlags.PressedOnClick and ui.ButtonFlags.Repeat) then
+    if currentFFB < 1.99 then
+      currentFFB = car.ffbMultiplier + 0.01
+      ac.setFFBMultiplier(currentFFB)
+      data.FinalMax = 0
+    end
   end
-  
   ui.addIcon(ui.Icons.Plus, 10, 0.5, nil, 0)
 end
 
