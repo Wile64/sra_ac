@@ -4,7 +4,7 @@
 
 -- https://github.com/ac-custom-shaders-patch/acc-lua-sdk/blob/main/.definitions/ac_common.txt
 
-VERSION = 1.155
+VERSION = 1.200
 require('classes/carsra')
 local car = CarSRA()
 require('classes/settings')
