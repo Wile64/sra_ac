@@ -30,12 +30,12 @@ function Label:rezise()
     self.rectRound = 3
 
     self.titleStart = vec2(self.rectStart.x + 2, self.rectStart.y + 1)
-    self.titleSize = 11 * self.scale
+    self.titleSize = 10.5 * self.scale
     self.titleColor = rgbm.colors.white
 
     self.valueStart = self.rectStart + 2
-    self.valueEnd = self.valueStart + (vec2(self.rectSize.x - 3, self.rectSize.y + (self.scale * 2.5)))
-    self.valueSize = self.rectSize.y / 1.20
+    self.valueEnd = self.valueStart + (vec2(self.rectSize.x - 3, self.rectSize.y - 1 + (self.scale * 2.5)))
+    self.valueSize = self.rectSize.y / 1.30
     self.valueColor = rgbm.colors.white
 
     self.progress = 0
@@ -95,12 +95,11 @@ function Label:draw(value)
             ui.Alignment.End, false, self.disabledColor)
     end
 
-    ui.dummy(self.rectSize)
+    ui.dummy(self.rectSize + 1)
 end
 
 function Label:setProgress(progress, color)
     if self.progress ~= progress then
-
         self.progress = math.min(math.max(progress, 0), 1)
         self.progressColor = color
         self.rectProgress = vec2((self.rectSize.x * self.progress), self.rectSize.y)

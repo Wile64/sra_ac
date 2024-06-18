@@ -11,26 +11,26 @@ require('classes/settings')
 local config = Settings()
 
 require('classes/gui')
-local labelTC = Label(vec2(40, 40), "TC", "0", config.Scale, config.LineColor)
-local labelABS = Label(vec2(40, 40), "ABS", "0", config.Scale, config.LineColor)
-local labelPosition = Label(vec2(40, 40), "POS.", "0", config.Scale, config.LineColor)
-local labelTurbo = Label(vec2(40, 40), "TURBO", "0", config.Scale, config.LineColor)
+local labelTC = Label(vec2(35, 35), "TC", "0", config.Scale, config.LineColor)
+local labelABS = Label(vec2(35, 35), "ABS", "0", config.Scale, config.LineColor)
+local labelPosition = Label(vec2(35, 35), "POS.", "0", config.Scale, config.LineColor)
+local labelTurbo = Label(vec2(35, 35), "TURBO", "0", config.Scale, config.LineColor)
 
-local labelSpeed = Label(vec2(110, 45), "SPEED", "0", config.Scale, config.LineColor)
-local labelFuel = Label(vec2(110, 35), "FUEL", "0", config.Scale, config.LineColor)
-local labelCons = Label(vec2(62, 40), "CONS.", "0", config.Scale, config.LineColor)
-local labelRemain = Label(vec2(40, 40), "REMAIN.", "0", config.Scale, config.LineColor)
-local labelLaps = Label(vec2(40, 40), "LAP(S)", "0", config.Scale, config.LineColor)
-local labelBias = Label(vec2(62, 40), "BIAS", "0", config.Scale, config.LineColor)
+local labelSpeed = Label(vec2(110, 40), "SPEED", "0", config.Scale, config.LineColor)
+local labelFuel = Label(vec2(110, 33), "FUEL", "0", config.Scale, config.LineColor)
+local labelCons = Label(vec2(62, 33), "CONS.", "0", config.Scale, config.LineColor)
+local labelRemain = Label(vec2(40, 33), "REMAIN.", "0", config.Scale, config.LineColor)
+local labelLaps = Label(vec2(40, 33), "LAP(S)", "0", config.Scale, config.LineColor)
+local labelBias = Label(vec2(62, 33), "BIAS", "0", config.Scale, config.LineColor)
 
 local labelP2P = Label(vec2(45, 40), "P2P", "0", config.Scale, config.LineColor)
 local labelDRS = Label(vec2(45, 40), "", "0", config.Scale, config.LineColor)
 local labelGear = Label(vec2(44, 100), "", "0", config.Scale, config.LineColor)
 
 local labelDelta = Label(vec2(120, 40), "DELTA", "0", config.Scale, config.LineColor)
-local labelEstimated = Label(vec2(120, 40), "ESTIMATED LAP", "0", config.Scale, config.LineColor)
-local labelLastTime = Label(vec2(120, 40), "LAST LAP", "0", config.Scale, config.LineColor)
-local labelBestTime = Label(vec2(120, 40), "BEST LAP", "0", config.Scale, config.LineColor)
+local labelEstimated = Label(vec2(120, 33), "ESTIMATED LAP", "0", config.Scale, config.LineColor)
+local labelLastTime = Label(vec2(120, 33), "LAST LAP", "0", config.Scale, config.LineColor)
+local labelBestTime = Label(vec2(120, 33), "BEST LAP", "0", config.Scale, config.LineColor)
 
 local function DrawBarRPM(progress, numRectangles, height, color)
   local totalWidth = ui.windowSize().x - 1
@@ -67,7 +67,7 @@ function script.windowMain(dt)
   local contentSize = ui.windowSize():sub(drawOffset)
   display.rect({ pos = drawOffset, size = contentSize, color = config.BackgroundColor })
 
-  ui.pushDWriteFont('OneSlot:\\fonts\\.')
+  ui.pushDWriteFont('OneSlot:/fonts;Weight=Bold')
 
   local rpmNormalized = car.carState.rpm / car.carState.rpmLimiter
   local color = config.RPMColor
@@ -76,7 +76,7 @@ function script.windowMain(dt)
   elseif rpmNormalized >= 0.88 then
     color = rgbm.colors.orange
   end
-  DrawBarRPM(rpmNormalized, 30, 20 * config.Scale, color)
+  DrawBarRPM(rpmNormalized, 20, 20 * config.Scale, color)
   if car.carState.kersPresent then
     if car.carState.kersMaxKJ > 0 then
       local ersNormalized = 1 - (car.carState.kersCurrentKJ / (car.carState.kersMaxKJ))
@@ -134,8 +134,8 @@ function script.windowMain(dt)
 
   local normalizedFuel = car.carState.fuel / car.carState.maxFuel
   labelFuel:setProgress(normalizedFuel, config.FuelColor)
-  labelFuel:draw(string.format("%d L", car.carState.fuel))
-  labelCons:draw(string.format("%2.1f", car.carState.fuelPerLap))
+  labelFuel:draw(string.format("%0.2f L", car.carState.fuel))
+  labelCons:draw(string.format("%2.2f", car.carState.fuelPerLap))
   ui.sameLine()
   labelRemain:draw((string.format("%1.0f", car:getRemainFuelLap())))
 
@@ -188,17 +188,6 @@ function script.windowMain(dt)
     showIcon(ui.Icons.Attention, vec2(validPos.x + 10 * config.Scale, validPos.y - 4 * config.Scale),
       30 * config.Scale, rgbm.colors.red)
   end
-  local sessionStr = {
-    "Undefined",
-    "Practice",
-    "Qualify",
-    "Race",
-    "Hotlap",
-    "TimeAttack",
-    "Drift",
-    "Drag" }
-  ui.dwriteText(string.format("%s", sessionStr[ac.getSim().raceSessionType + 1]), 12 * config.Scale, rgbm.colors.white)
-
   ui.endGroup()
 
   ui.sameLine()
