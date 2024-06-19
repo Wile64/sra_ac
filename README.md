@@ -47,6 +47,8 @@ _* Ne fonctionne pas pour les autres voitures._
 <li> Dégat Boite</li>
 <li>Dégat avant / arrière</li>
 <li>Dégat droit / gauche</li>
+<li>Dégat Plat de pneu</li>
+<li>Dégat Suspension</li>
 <li>Options et zoom disponible</li>
 </ul>
 

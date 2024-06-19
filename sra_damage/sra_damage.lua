@@ -1,7 +1,7 @@
 --
 -- Created by Wile64 on december 2023
 --
-VERSION = 1.102
+VERSION = 1.200
 
 require('classes/settings')
 local config = Settings()
@@ -32,7 +32,7 @@ function script.windowMain(dt)
   if carState == nil then return end
   local imageSize = vec2(100, 320) * config.scale
   local imageStart = ui.getCursor()
-  local fontSize = 16 * config.scale
+  local fontSize = 15 * config.scale
   local tyreColor = rgbm.colors.gray
   local adjustY = fontSize / 2
 
@@ -42,46 +42,65 @@ function script.windowMain(dt)
   local rearDamage = carState.damage[1] <= 100 and carState.damage[1] or 100
   local leftDamage = carState.damage[2] <= 100 and carState.damage[2] or 100
   local rightDamage = carState.damage[3] <= 100 and carState.damage[3] or 100
-  local suspensionFL = carState.wheels[0].suspensionDamage
-  local suspensionFR = carState.wheels[1].suspensionDamage
-  local suspensionRL = carState.wheels[2].suspensionDamage
-  local suspensionRR = carState.wheels[3].suspensionDamage
+  local suspensionFL = carState.wheels[0].suspensionDamage * 100
+  local suspensionFR = carState.wheels[1].suspensionDamage * 100
+  local suspensionRL = carState.wheels[2].suspensionDamage * 100
+  local suspensionRR = carState.wheels[3].suspensionDamage * 100
+  local tyreFL = carState.wheels[0].tyreFlatSpot * 100
+  local tyreFR = carState.wheels[1].tyreFlatSpot * 100
+  local tyreRL = carState.wheels[2].tyreFlatSpot * 100
+  local tyreRR = carState.wheels[3].tyreFlatSpot * 100
 
   ui.drawImage('damage\\engine.png', imageStart, imageSize, getColor(engineLifeLeft))
 
   ui.drawImage('damage\\gearbox.png', imageStart, imageSize, getColor(gearboxDamage))
+  ui.drawImage('damage\\rear_axle.png', imageStart, imageSize, tyreColor)
 
   ui.drawImage('damage\\front.png', imageStart, imageSize, getColor(frontDamage))
   ui.drawImage('damage\\rear.png', imageStart, imageSize, getColor(rearDamage))
 
   ui.drawImage('damage\\left.png', imageStart, imageSize, getColor(leftDamage))
   ui.drawImage('damage\\sus_fl.png', imageStart, imageSize, getColor(suspensionFL))
-  ui.drawImage('damage\\tyre_fl.png', imageStart, imageSize, tyreColor)
+  ui.drawImage('damage\\tyre_fl.png', imageStart, imageSize, getColor(tyreFL))
 
   ui.drawImage('damage\\sus_rl.png', imageStart, imageSize, getColor(suspensionRL))
-  ui.drawImage('damage\\tyre_rl.png', imageStart, imageSize, tyreColor)
+  ui.drawImage('damage\\tyre_rl.png', imageStart, imageSize, getColor(tyreRL))
 
   ui.drawImage('damage\\right.png', imageStart, imageSize, getColor(rightDamage))
   ui.drawImage('damage\\sus_fr.png', imageStart, imageSize, getColor(suspensionFR))
-  ui.drawImage('damage\\tyre_fr.png', imageStart, imageSize, tyreColor)
+  ui.drawImage('damage\\tyre_fr.png', imageStart, imageSize, getColor(tyreFR))
 
   ui.drawImage('damage\\sus_rr.png', imageStart, imageSize, getColor(suspensionRR))
-  ui.drawImage('damage\\tyre_rr.png', imageStart, imageSize, tyreColor)
+  ui.drawImage('damage\\tyre_rr.png', imageStart, imageSize, getColor(tyreRR))
 
-  ui.dwriteDrawText(sf("%0.0f%%", engineLifeLeft), fontSize,
-    vec2(42, 78 - adjustY) * config.scale, config.textColor)  -- engine
-  ui.dwriteDrawText(sf("%0.0f%%", gearboxDamage), fontSize,
-    vec2(45, 120 - adjustY) * config.scale, config.textColor) -- gearbox
+  --ui.drawRect(vec2(25, 70) * config.scale, vec2(75, 120) * config.scale, rgbm.colors.blue)
+  ui.dwriteDrawTextClipped(sf("%.0f%%", engineLifeLeft), fontSize, vec2(25, 70) * config.scale,
+    vec2(75, 120) * config.scale,
+    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
 
-  ui.dwriteDrawText(sf("%0.0f%%", frontDamage), fontSize,
-    vec2(47, 46 - adjustY) * config.scale, config.textColor)  --front
-  ui.dwriteDrawText(sf("%0.0f%%", rearDamage), fontSize,
-    vec2(42, 290 - adjustY) * config.scale, config.textColor) -- rear
+  --ui.drawRect(vec2(30, 130) * config.scale, vec2(70, 180) * config.scale, rgbm.colors.blue)
+  ui.dwriteDrawTextClipped(sf("%.0f%%", gearboxDamage), fontSize, vec2(30, 130) * config.scale,
+    vec2(70, 180) * config.scale,
+    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
+  --ui.drawRect(vec2(25, 35) * config.scale, vec2(75, 55) * config.scale, rgbm.colors.blue)
+  ui.dwriteDrawTextClipped(sf("%.0f%%", frontDamage), fontSize, vec2(25, 35) * config.scale,
+    vec2(75, 55) * config.scale,
+    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
 
-  ui.dwriteDrawText(sf("%0.0f%%", rightDamage), fontSize,
-    vec2(80, 170 - adjustY) * config.scale, config.textColor) -- right
-  ui.dwriteDrawText(sf("%0.0f%%", leftDamage), fontSize,
-    vec2(5, 170 - adjustY) * config.scale, config.textColor)   -- left
+  --ui.drawRect(vec2(25, 275) * config.scale, vec2(75, 300) * config.scale, rgbm.colors.blue)
+  ui.dwriteDrawTextClipped(sf("%.0f%%", rearDamage), fontSize, vec2(25, 275) * config.scale,
+    vec2(75, 300) * config.scale,
+    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
+
+  --ui.drawRect(vec2(70, 150) * config.scale, vec2(100, 180) * config.scale, rgbm.colors.blue)
+  ui.dwriteDrawTextClipped(sf("%.0f%%", rightDamage), fontSize, vec2(70, 150) * config.scale,
+    vec2(100, 180) * config.scale,
+    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
+  --ui.drawRect(vec2(0, 150) * config.scale, vec2(30, 180) * config.scale, rgbm.colors.blue)
+  ui.dwriteDrawTextClipped(sf("%.0f%%", leftDamage), fontSize, vec2(0, 150) * config.scale,
+    vec2(30, 180) * config.scale,
+    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
+
   ui.dummy(imageSize + 1)
   ui.popDWriteFont()
 end
