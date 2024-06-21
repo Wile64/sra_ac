@@ -11,6 +11,8 @@ function CarSRA:initialize()
     ---@private
     self.carID = 0
     self.currentCompoundIndex = -1
+    self.frontWearCurve = nil
+    self.rearWearCurve = nil
 end
 
 function CarSRA:setFocusedCar()
@@ -109,7 +111,7 @@ end
 --- Get remain fuel lap 
 ---@return number
 function CarSRA:getRemainFuelLap()
-    return car.fuelPerLap > 0 and car.fuel / car.fuelPerLap or 0
+    return self.carState.fuelPerLap > 0 and self.carState.fuel / self.carState.fuelPerLap or 0
 end
 
 function CarSRA:update(dt)
@@ -133,4 +135,6 @@ function CarSRA:loadTyreInfo()
     end
     self.idealFrontPressure = tyreini:get(front, "PRESSURE_IDEAL", 0)
     self.idealRearPressure = tyreini:get(rear, "PRESSURE_IDEAL", 0)
+    self.frontWearCurve = tyreini:tryGetLut(front, "WEAR_CURVE")
+    self.rearWearCurve = tyreini:tryGetLut(rear, "WEAR_CURVE")
 end

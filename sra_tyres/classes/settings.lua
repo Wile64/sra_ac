@@ -15,6 +15,7 @@ function Settings:initialize() -- constructor
     self.showFlatSpot = true
     self.showLoad = true
     self.showDisc = true
+    self.showWearGrip = true
     self:load()
 end
 
@@ -29,6 +30,7 @@ function Settings:load()
         self.showFlatSpot = self.ini:get("UI", "showFlatSpot", true)
         self.showLoad = self.ini:get("UI", "showLoad", true)
         self.showDisc = self.ini:get("UI", "showDisc", true)
+        self.showWearGrip = self.ini:get("UI", "showWearGrip", true)
     end
 end
 
@@ -42,5 +44,6 @@ function Settings:save()
     self.ini:set("UI", "showFlatSpot", self.showFlatSpot)
     self.ini:set("UI", "showLoad", self.showLoad)
     self.ini:set("UI", "showDisc", self.showDisc)
+    self.ini:set("UI", "showWearGrip", self.showWearGrip)
     self.ini:save(self.fileINI)
 end

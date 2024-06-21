@@ -1,7 +1,9 @@
 --
 -- Created by Wile64 on december 2023
 --
-VERSION = 1.200
+VERSION = 1.201
+
+DEBUG = false
 
 require('classes/settings')
 local config = Settings()
@@ -12,29 +14,38 @@ local function getColor(value)
   value = value / 100
   value = math.min(math.max(value, 0), 1)
   local r, g, b
-
   if value < 0.5 then
     r = value * 3
     g = 1 - value
-    b = 0
+    b = 0.3
   else
     r = 1
     g = 1 - value
-    b = 0
+    b = 0.3
   end
-  return rgbm(r, g, b, 0.5)
+  return rgbm(r, g, b, 0.6)
+end
+
+function DrawTextAt(text, fontSize, pos, size, horizontalAligment, color)
+  local textSize = ui.measureDWriteText(text, fontSize)
+  pos = pos - vec2(0, textSize.y / 2)
+  pos = pos * config.scale
+  size = size * config.scale
+  if DEBUG then
+    ui.drawRect(pos, pos + size, rgbm.colors.red)
+  end
+  ui.dwriteDrawTextClipped(text, fontSize, pos, pos + size, horizontalAligment, ui.Alignment.Center, false, color)
 end
 
 function script.windowMain(dt)
   ac.setWindowTitle('windowMain', string.format('SRA Damage v%2.3f', VERSION))
-  ui.pushDWriteFont('OneSlot:\\fonts\\.')
+  ui.pushDWriteFont('OneSlot:/fonts;Weight=Bold')
   local carState = ac.getCar(ac.getSim().focusedCar)
   if carState == nil then return end
   local imageSize = vec2(100, 320) * config.scale
   local imageStart = ui.getCursor()
   local fontSize = 15 * config.scale
   local tyreColor = rgbm.colors.gray
-  local adjustY = fontSize / 2
 
   local engineLifeLeft = carState.engineLifeLeft > 0 and (1 - carState.engineLifeLeft / 1000) * 100 or 100
   local gearboxDamage = carState.gearboxDamage < 1 and carState.gearboxDamage * 100 or 100
@@ -73,33 +84,14 @@ function script.windowMain(dt)
   ui.drawImage('damage\\sus_rr.png', imageStart, imageSize, getColor(suspensionRR))
   ui.drawImage('damage\\tyre_rr.png', imageStart, imageSize, getColor(tyreRR))
 
-  --ui.drawRect(vec2(25, 70) * config.scale, vec2(75, 120) * config.scale, rgbm.colors.blue)
-  ui.dwriteDrawTextClipped(sf("%.0f%%", engineLifeLeft), fontSize, vec2(25, 70) * config.scale,
-    vec2(75, 120) * config.scale,
-    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
+  DrawTextAt(sf("%.0f%%", engineLifeLeft), fontSize, vec2(25, 90), vec2(50, 20), ui.Alignment.Center, config.textColor)
+  DrawTextAt(sf("%.0f%%", gearboxDamage), fontSize, vec2(25, 150), vec2(50, 20), ui.Alignment.Center, config.textColor)
 
-  --ui.drawRect(vec2(30, 130) * config.scale, vec2(70, 180) * config.scale, rgbm.colors.blue)
-  ui.dwriteDrawTextClipped(sf("%.0f%%", gearboxDamage), fontSize, vec2(30, 130) * config.scale,
-    vec2(70, 180) * config.scale,
-    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
-  --ui.drawRect(vec2(25, 35) * config.scale, vec2(75, 55) * config.scale, rgbm.colors.blue)
-  ui.dwriteDrawTextClipped(sf("%.0f%%", frontDamage), fontSize, vec2(25, 35) * config.scale,
-    vec2(75, 55) * config.scale,
-    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
+  DrawTextAt(sf("%.0f%%", frontDamage), fontSize, vec2(25, 40), vec2(50, 25), ui.Alignment.Center, config.textColor)
+  DrawTextAt(sf("%.0f%%", rearDamage), fontSize, vec2(25, 290), vec2(50, 25), ui.Alignment.Center, config.textColor)
 
-  --ui.drawRect(vec2(25, 275) * config.scale, vec2(75, 300) * config.scale, rgbm.colors.blue)
-  ui.dwriteDrawTextClipped(sf("%.0f%%", rearDamage), fontSize, vec2(25, 275) * config.scale,
-    vec2(75, 300) * config.scale,
-    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
-
-  --ui.drawRect(vec2(70, 150) * config.scale, vec2(100, 180) * config.scale, rgbm.colors.blue)
-  ui.dwriteDrawTextClipped(sf("%.0f%%", rightDamage), fontSize, vec2(70, 150) * config.scale,
-    vec2(100, 180) * config.scale,
-    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
-  --ui.drawRect(vec2(0, 150) * config.scale, vec2(30, 180) * config.scale, rgbm.colors.blue)
-  ui.dwriteDrawTextClipped(sf("%.0f%%", leftDamage), fontSize, vec2(0, 150) * config.scale,
-    vec2(30, 180) * config.scale,
-    ui.Alignment.Center, ui.Alignment.Center, false, config.textColor)
+  DrawTextAt(sf("%.0f%%", rightDamage), fontSize, vec2(70, 170), vec2(30, 30), ui.Alignment.End, config.textColor)
+  DrawTextAt(sf("%.0f%%", leftDamage), fontSize, vec2(0, 170), vec2(30, 30), ui.Alignment.Start, config.textColor)
 
   ui.dummy(imageSize + 1)
   ui.popDWriteFont()
