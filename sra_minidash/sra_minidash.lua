@@ -4,7 +4,7 @@
 
 -- https://github.com/ac-custom-shaders-patch/acc-lua-sdk/blob/main/.definitions/ac_common.txt
 
-VERSION = 1.200
+VERSION = 1.201
 require('classes/carsra')
 local car = CarSRA()
 require('classes/settings')
@@ -18,10 +18,10 @@ local labelTurbo = Label(vec2(35, 35), "TURBO", "0", config.Scale, config.LineCo
 
 local labelSpeed = Label(vec2(110, 40), "SPEED", "0", config.Scale, config.LineColor)
 local labelFuel = Label(vec2(110, 33), "FUEL", "0", config.Scale, config.LineColor)
-local labelCons = Label(vec2(62, 33), "CONS.", "0", config.Scale, config.LineColor)
-local labelRemain = Label(vec2(40, 33), "REMAIN.", "0", config.Scale, config.LineColor)
-local labelLaps = Label(vec2(40, 33), "LAP(S)", "0", config.Scale, config.LineColor)
-local labelBias = Label(vec2(62, 33), "BIAS", "0", config.Scale, config.LineColor)
+local labelCons = Label(vec2(66, 33), "CONS.", "0", config.Scale, config.LineColor)
+local labelRemain = Label(vec2(42, 33), "REMAIN.", "0", config.Scale, config.LineColor)
+local labelLaps = Label(vec2(42, 33), "LAP(S)", "0", config.Scale, config.LineColor)
+local labelBias = Label(vec2(66, 33), "BIAS", "0", config.Scale, config.LineColor)
 
 local labelP2P = Label(vec2(45, 40), "P2P", "0", config.Scale, config.LineColor)
 local labelDRS = Label(vec2(45, 40), "", "0", config.Scale, config.LineColor)
@@ -54,11 +54,17 @@ local function showIcon(iconID, pos, size, color)
   ui.drawIcon(iconID, pos, vec2(pos.x + size, pos.y + size), color)
 end
 
-local function progressBarH(progress, rectSize, color)
+local function progressBarV(progress, rectSize, color)
+  progress = math.min(math.max(progress, 0), 1)
+
   local startPosition = ui.getCursor()
-  local rectprogress = vec2((rectSize.x * progress), rectSize.y)
-  ui.drawRectFilled(startPosition + 1, startPosition + 1 + rectprogress, color, 3)
-  ui.dummy(rectSize)
+  local progressBarFilledSize = vec2(rectSize.x, rectSize.y * progress)
+
+  ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.gray, 3)
+  startPosition.y = startPosition.y + (rectSize.y - progressBarFilledSize.y)
+  ui.drawRectFilled(startPosition, startPosition + progressBarFilledSize, color, 3)
+  ui.drawRect(startPosition, startPosition + rectSize, config.LineColor, 3)
+  ui.dummy(rectSize + 1 * config.Scale)
 end
 
 function script.windowMain(dt)
@@ -66,7 +72,7 @@ function script.windowMain(dt)
   local drawOffset = ui.getCursor()
   local contentSize = ui.windowSize():sub(drawOffset)
   display.rect({ pos = drawOffset, size = contentSize, color = config.BackgroundColor })
-
+  ui.pushStyleVar(ui.StyleVar.ItemSpacing, 2)
   ui.pushDWriteFont('OneSlot:/fonts;Weight=Bold')
 
   local rpmNormalized = car.carState.rpm / car.carState.rpmLimiter
@@ -80,19 +86,16 @@ function script.windowMain(dt)
   if car.carState.kersPresent then
     if car.carState.kersMaxKJ > 0 then
       local ersNormalized = 1 - (car.carState.kersCurrentKJ / (car.carState.kersMaxKJ))
-      progressBarH(ersNormalized, vec2(160 * config.Scale, 5 * config.Scale), rgbm.colors.blue)
+      progressBarV(ersNormalized, vec2(10 * config.Scale, 145 * config.Scale), rgbm.colors.blue)
+      if ui.itemHovered() then
+        ui.tooltip(function()
+          ui.pushFont(ui.Font.Monospace)
+          ui.text("ERS")
+          ui.popFont()
+        end)
+      end
+      ui.sameLine()
     end
-    local kersStatus = 0
-    if car.carState.kersCurrentKJ >= car.carState.kersMaxKJ then
-      kersStatus = 2
-    elseif car.carState.kersButtonPressed then
-      kersStatus = 3
-    else
-      kersStatus = 1
-    end
-    local kersColors = { [1] = rgbm.colors.blue, [2] = rgbm.colors.red, [3] = rgbm.colors.green }
-    ui.sameLine()
-    progressBarH(car.carState.kersCharge, vec2(160 * config.Scale, 5 * config.Scale), kersColors[kersStatus])
   end
   ui.beginGroup()
   if car.carState.tractionControlMode > 0 then
@@ -204,6 +207,27 @@ function script.windowMain(dt)
   labelLastTime:draw(ac.lapTimeToString(car.carState.previousLapTimeMs))
   labelBestTime:draw(ac.lapTimeToString(car.carState.bestLapTimeMs))
   ui.endGroup()
+  if car.carState.kersPresent then
+    local kersStatus = 0
+    if car.carState.kersCurrentKJ >= car.carState.kersMaxKJ then
+      kersStatus = 2
+    elseif car.carState.kersButtonPressed then
+      kersStatus = 3
+    else
+      kersStatus = 1
+    end
+    local kersColors = { [1] = rgbm.colors.blue, [2] = rgbm.colors.red, [3] = rgbm.colors.green }
+    ui.sameLine()
+    progressBarV(car.carState.kersCharge, vec2(10 * config.Scale, 145 * config.Scale), kersColors[kersStatus])
+    if ui.itemHovered() then
+      ui.tooltip(function()
+        ui.pushFont(ui.Font.Monospace)
+        ui.text("KERS")
+        ui.popFont()
+      end)
+    end
+  end
+  ui.popStyleVar()
   ui.popDWriteFont()
 end
 
