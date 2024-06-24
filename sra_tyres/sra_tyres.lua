@@ -1,12 +1,12 @@
 --
 -- Created by Wile64 on october 2023
 --
--- https://github.com/ac-custom-shaders-patch/acc-lua-sdk/blob/main/.definitions/ac_common.txt
+
 
 require('classes/settings')
 require('classes/carsra')
-VERSION = 1.300
-DEBUG = true
+VERSION = 1.301
+DEBUG = false
 
 local carInfo = CarSRA()
 local config = Settings()
@@ -38,7 +38,7 @@ table.insert(tyrewheelLocks, 2, { wheelLock = false, flatSpotValue = 0 })
 table.insert(tyrewheelLocks, 3, { wheelLock = false, flatSpotValue = 0 })
 
 local function progressBarV(progress, rectSize, color)
-  progress = math.min(math.max(progress, 0), 1) -- Assurez-vous que la valeur est dans la plage 0-1
+  progress = math.min(math.max(progress, 0), 1)
 
   local startPosition = ui.getCursor()
   local progressBarFilledSize = vec2(rectSize.x, rectSize.y * progress)
@@ -50,7 +50,7 @@ local function progressBarV(progress, rectSize, color)
 end
 
 local function WearProgress(progress, tyreVirtualKM, rectSize, color, front)
-  progress = math.min(math.max(progress, 0), 1) -- Assurez-vous que la valeur est dans la plage 0-1
+  progress = math.min(math.max(progress, 0), 1)
 
   local startPosition = ui.getCursor()
   local progressBarFilledSize = vec2(rectSize.x, rectSize.y * progress)
@@ -87,23 +87,18 @@ local function toeIn(value, rectSize, color)
   local minValue = -20
   local maxValue = 20
 
-  -- Assurez-vous que la valeur est dans la plage autorisée
   value = math.min(maxValue, math.max(minValue, value))
 
-  -- Calculez la position de la barre en fonction de la valeur
-  --  local normalizedValue = (value - minValue) / (maxValue - minValue)
   local normalizedValue = value / maxValue
   local barPosition = ui.getCursor()
 
-  -- Dessinez la barre de progression
   ui.drawRect(barPosition, barPosition + rectSize, rgbm.colors.gray)
   if value > 0 then
     ui.drawRectFilled(barPosition + middleRect, barPosition + middleRect +
-      vec2(middleRect.x * normalizedValue, rectSize.y), color) -- Barre verte
+      vec2(middleRect.x * normalizedValue, rectSize.y), color)
   else
     ui.drawRectFilled(barPosition + (middleRect + vec2(middleRect.x * normalizedValue, 0)),
-      barPosition + vec2(middleRect.x, rectSize.y),
-      color) -- Barre verte
+      barPosition + vec2(middleRect.x, rectSize.y), color)
   end
   ui.dwriteTextAligned(string.format("%.2f", value), 8 * config.Scale, ui.Alignment.Start,
     ui.Alignment.Center, rectSize, false, rgbm.colors.white)
@@ -542,10 +537,10 @@ local function showGripInfo(pos)
       if grip > 99.5 then
         gripInfos.frontHigh = 10 * frontWear:getPointInput(i) / tyreConsumptionRate
       end
-      if (grip < 99.5) and (grip > 96) then
+      if (grip < 99.5) and (grip > 97) then
         gripInfos.frontMedium = 10 * frontWear:getPointInput(i) / tyreConsumptionRate
       end
-      if grip < 96 then
+      if grip < 97 then
         gripInfos.frontLow = 10 * frontWear:getPointInput(i) / tyreConsumptionRate
       end
     end
@@ -581,12 +576,6 @@ local function showGripInfo(pos)
   ui.endChild()
 end
 
-local function ShowDebug()
-  ui.toolWindow("#Debug", vec2(100, 100), vec2(100, 100), function()
-
-  end)
-end
-
 function script.windowMain(dt)
   ac.setWindowTitle('windowMain', string.format('SRA Tyres v%2.3f', VERSION))
   ui.pushDWriteFont('montserrat:/fonts')
@@ -601,8 +590,8 @@ function script.windowMain(dt)
       rgbm.colors.white)
   end
   if config.showOptimal then
-    ui.dwriteText(string.format("Optimum Temperature : %3.0f° - %3.0f°", carInfo.minThermal, carInfo.maxThermal), 10 * config
-      .Scale, rgbm.colors.white)
+    ui.dwriteText(string.format("Optimum Temperature : %3.0f° - %3.0f°", carInfo.minThermal, carInfo.maxThermal),
+      10 * config.Scale, rgbm.colors.white)
   end
 
   ui.separator()
@@ -624,9 +613,6 @@ function script.windowMain(dt)
   ui.sameLine()
   drawTyreRight(carInfo:getTyreRR(), tyreSize, false)
   ui.popDWriteFont()
-  if DEBUG then
-    ShowDebug()
-  end
 end
 
 function script.update(dt)
