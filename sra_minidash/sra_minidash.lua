@@ -56,13 +56,10 @@ end
 
 local function progressBarV(progress, rectSize, color)
   progress = math.min(math.max(progress, 0), 1)
-
   local startPosition = ui.getCursor()
   local progressBarFilledSize = vec2(rectSize.x, rectSize.y * progress)
-
-  ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.gray, 3)
-  startPosition.y = startPosition.y + (rectSize.y - progressBarFilledSize.y)
-  ui.drawRectFilled(startPosition, startPosition + progressBarFilledSize, color, 3)
+  local startfilled = startPosition + vec2(0, rectSize.y - progressBarFilledSize.y)
+  ui.drawRectFilled(startfilled, startfilled + progressBarFilledSize, color, 3)
   ui.drawRect(startPosition, startPosition + rectSize, config.LineColor, 3)
   ui.dummy(rectSize + 1 * config.Scale)
 end
@@ -86,7 +83,7 @@ function script.windowMain(dt)
   if car.carState.kersPresent then
     if car.carState.kersMaxKJ > 0 then
       local ersNormalized = 1 - (car.carState.kersCurrentKJ / (car.carState.kersMaxKJ))
-      progressBarV(ersNormalized, vec2(10 * config.Scale, 145 * config.Scale), rgbm.colors.blue)
+      progressBarV(ersNormalized, vec2(10 * config.Scale, 145 * config.Scale), config.RPMColor)
       if ui.itemHovered() then
         ui.tooltip(function()
           ui.pushFont(ui.Font.Monospace)
@@ -209,14 +206,15 @@ function script.windowMain(dt)
   ui.endGroup()
   if car.carState.kersPresent then
     local kersStatus = 0
-    if car.carState.kersCurrentKJ >= car.carState.kersMaxKJ then
+    if car.carState.kersCharging then
       kersStatus = 2
     elseif car.carState.kersButtonPressed then
       kersStatus = 3
     else
       kersStatus = 1
     end
-    local kersColors = { [1] = rgbm.colors.blue, [2] = rgbm.colors.red, [3] = rgbm.colors.green }
+    -- 1 = normal, 2 = charging, 3 = active
+    local kersColors = { [1] = rgbm.colors.blue, [2] = rgbm.colors.yellow, [3] = rgbm.colors.green }
     ui.sameLine()
     progressBarV(car.carState.kersCharge, vec2(10 * config.Scale, 145 * config.Scale), kersColors[kersStatus])
     if ui.itemHovered() then
