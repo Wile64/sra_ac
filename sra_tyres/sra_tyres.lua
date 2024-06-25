@@ -5,7 +5,7 @@
 
 require('classes/settings')
 require('classes/carsra')
-VERSION = 1.301
+VERSION = 1.302
 DEBUG = false
 
 local carInfo = CarSRA()
@@ -523,57 +523,74 @@ local function drawTyreRight(tyre, rectSize, front)
   ui.popStyleVar()
 end
 
-local function showGripInfo(pos)
-  ui.sameLine()
-  ui.beginChild("showInfo", vec2(250, 160), true, ui.WindowFlags.AlwaysAutoResize)
+local function showGripInfo(pos, size)
+  ui.beginTransparentWindow("showInfo", pos, size, true, ui.WindowFlags.AlwaysAutoResize)
+  local contentSize = ui.windowSize()
+  ui.drawRectFilled(ui.getCursor(), ui.getCursor() + contentSize, rgbm(0.2, 0.2, 0.2, 1), 15,
+    ui.CornerFlags.TopRight + ui.CornerFlags.BottomRight)
+  ui.pushDWriteFont('montserrat:/fonts')
   local frontWear = carInfo.frontWearCurve
   local rearWear = carInfo.rearWearCurve
   local tyreConsumptionRate = ac.getSim().tyreConsumptionRate
   if frontWear ~= nil then
     gripInfos.frontLoaded = true
-    ui.header("Front:")
+    ui.dwriteText("Front:", 12 * config.Scale, rgbm(0.7, 1, 0.5, 1))
     for i = 0, #frontWear - 1 do
       local grip = frontWear:getPointOutput(i)
       if grip > 99.5 then
-        gripInfos.frontHigh = 10 * frontWear:getPointInput(i) / tyreConsumptionRate
+        gripInfos.frontHigh = 85 * frontWear:getPointInput(i) / tyreConsumptionRate
       end
       if (grip < 99.5) and (grip > 97) then
-        gripInfos.frontMedium = 10 * frontWear:getPointInput(i) / tyreConsumptionRate
+        gripInfos.frontMedium = 85 * frontWear:getPointInput(i) / tyreConsumptionRate
       end
       if grip < 97 then
-        gripInfos.frontLow = 10 * frontWear:getPointInput(i) / tyreConsumptionRate
+        gripInfos.frontLow = 85 * frontWear:getPointInput(i) / tyreConsumptionRate
       end
     end
     local tracklenght = ac.getSim().trackLengthM / 1000
-    ui.text(string.format("High grip %.1f Km (%0.1f lap)", gripInfos.frontHigh, gripInfos.frontHigh / tracklenght))
-    ui.text(string.format("Medium grip %.1f Km (%0.1f lap)", gripInfos.frontMedium, gripInfos.frontMedium / tracklenght))
-    ui.text(string.format("Low grip %.1f Km (%0.1f lap)", gripInfos.frontLow, gripInfos.frontLow / tracklenght))
+    ui.dwriteText(
+      string.format("High grip ± %.1f Km (%0.1f lap)", gripInfos.frontHigh, gripInfos.frontHigh / tracklenght),
+      10 * config.Scale, rgbm.colors.white)
+    ui.dwriteText(
+      string.format("Medium grip ± %.1f Km (%0.1f lap)", gripInfos.frontMedium, gripInfos.frontMedium / tracklenght),
+      10 * config.Scale, rgbm.colors.white)
+    ui.dwriteText(string.format("Low grip ± %.1f Km (%0.1f lap)", gripInfos.frontLow, gripInfos.frontLow / tracklenght),
+      10 * config.Scale, rgbm.colors.white)
   else
-    ui.text("No front lut info !")
+    ui.dwriteText("No rear lut info !", 10 * config.Scale, rgbm.colors.white)
   end
   if rearWear ~= nil then
     gripInfos.rearLoaded = true
-    ui.header("Rear:")
+    ui.dwriteText("Rear:", 12 * config.Scale, rgbm(0.7, 1, 0.5, 1))
     for i = 0, #rearWear - 1 do
       local grip = rearWear:getPointOutput(i)
       if grip > 99.5 then
-        gripInfos.RearHigh = 100 * rearWear:getPointInput(i) / tyreConsumptionRate
+        gripInfos.RearHigh = 85 * rearWear:getPointInput(i) / tyreConsumptionRate
       end
-      if (grip < 99.5) and (grip > 96) then
-        gripInfos.RearMedium = 100 * rearWear:getPointInput(i) / tyreConsumptionRate
+      if (grip < 99.5) and (grip > 97) then
+        gripInfos.RearMedium = 85 * rearWear:getPointInput(i) / tyreConsumptionRate
       end
-      if grip < 96 then
-        gripInfos.RearLow = 100 * rearWear:getPointInput(i) / tyreConsumptionRate
+      if grip < 97 then
+        gripInfos.RearLow = 85 * rearWear:getPointInput(i) / tyreConsumptionRate
       end
     end
     local tracklenght = ac.getSim().trackLengthM / 1000
-    ui.text(string.format("High grip %.1f Km (%0.1f lap)", gripInfos.RearHigh, gripInfos.RearHigh / tracklenght))
-    ui.text(string.format("Medium grip %.1f Km (%0.1f lap)", gripInfos.RearMedium, gripInfos.RearMedium / tracklenght))
-    ui.text(string.format("Low grip %.1f Km (%0.1f lap)", gripInfos.RearLow, gripInfos.RearLow / tracklenght))
+    ui.dwriteText(string.format("High grip ± %.1f Km (%0.1f lap)", gripInfos.RearHigh, gripInfos.RearHigh / tracklenght),
+      10 * config.Scale, rgbm.colors.white)
+    ui.dwriteText(
+      string.format("Medium grip ± %.1f Km (%0.1f lap)", gripInfos.RearMedium, gripInfos.RearMedium / tracklenght),
+      10 * config.Scale, rgbm.colors.white)
+    ui.dwriteText(string.format("Low grip ± %.1f Km (%0.1f lap)", gripInfos.RearLow, gripInfos.RearLow / tracklenght),
+      10 * config.Scale, rgbm.colors.white)
   else
-    ui.text("No rear lut info !")
+    ui.dwriteText("No rear lut info !", 10 * config.Scale, rgbm.colors.white)
   end
-  ui.endChild()
+  ui.popDWriteFont()
+  ui.endTransparentWindow()
+end
+
+local function mouseInWindow()
+  return ui.mousePos() > ui.windowPos() and ui.mousePos() < ui.windowPos() + ui.windowSize()
 end
 
 function script.windowMain(dt)
@@ -599,20 +616,18 @@ function script.windowMain(dt)
   drawTyreLeft(carInfo:getTyreFL(), tyreSize, true)
   ui.sameLine()
   drawTyreRight(carInfo:getTyreFR(), tyreSize, true)
-  if ui.mouseClicked(ui.MouseButton.Middle) then
+  if ui.mouseClicked(ui.MouseButton.Middle) and mouseInWindow() then
     isShowGripInfo = not isShowGripInfo
   end
-
-  if isShowGripInfo then
-    showGripInfo(ui.getCursor())
-  end
-
   ui.separator()
 
   drawTyreLeft(carInfo:getTyreRL(), tyreSize, false)
   ui.sameLine()
   drawTyreRight(carInfo:getTyreRR(), tyreSize, false)
   ui.popDWriteFont()
+  if isShowGripInfo then
+    showGripInfo(ui.windowPos() + vec2(ui.windowSize().x, 22), vec2(170 * config.Scale, ui.windowSize().y - 22))
+  end
 end
 
 function script.update(dt)
