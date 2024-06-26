@@ -10,6 +10,7 @@ require('views/timehud')
 require('views/ledhud')
 require('views/poshud')
 require('views/sectorhud')
+require('views/weatherhud')
 require('classes/settings')
 
 CAR = CarSRA()

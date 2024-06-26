@@ -1,22 +1,28 @@
 ---comment
 ---@param text string
 ---@param icon ui.Icons
-local function drawItem(text, icon)
+---@param Backcolor rgbm?
+---@param fontColor rgbm?
+local function drawItem(text, icon, Backcolor, fontColor)
     local pos = ui.getCursor()
     local size = vec2(120, 25) * SETTING.scale
     local rectText = vec2(110, 25) * SETTING.scale
-    local bckImage = ".//img//timerbg.png"
     local iconPosX = 10 * SETTING.scale
     local iconPosY = 4 * SETTING.scale
     local iconSize = 18 * SETTING.scale
     local fontSize = 20 * SETTING.scale
-
-    ui.drawImage(bckImage, pos, pos + size, SETTING.styleColor)
+    if fontColor == nil then
+        fontColor = SETTING.fontColor
+    end
+    if Backcolor == nil then
+        Backcolor = SETTING.styleColor
+    end
+    ui.drawRectFilled(pos, pos + size, Backcolor, 10 * SETTING.scale)
     ui.dwriteDrawTextClipped(text, fontSize, pos, pos + rectText,
-        ui.Alignment.End, ui.Alignment.Center, false, SETTING.fontColor)
+        ui.Alignment.End, ui.Alignment.Center, false, fontColor)
     pos.x = pos.x + iconPosX
     pos.y = pos.y + iconPosY
-    ui.drawIcon(icon, pos, pos + iconSize, SETTING.fontColor)
+    ui.drawIcon(icon, pos, pos + iconSize, fontColor)
     ui.dummy(size)
 end
 
@@ -31,8 +37,8 @@ local sessionStr = {
     "Drag" }
 
 function script.posHUD(dt)
-    ui.pushDWriteFont('OneSlot:\\fonts\\.')
-    ui.pushStyleVar(ui.StyleVar.ItemSpacing, 0)
+    ui.pushDWriteFont('OneSlot:/fonts;Weight=Bold')
+    ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
 
     --Session Type
     drawItem(sessionStr[ac.getSim().raceSessionType + 1], ".//img//session.png")
@@ -82,7 +88,49 @@ function script.posHUD(dt)
         drawItem(timeStr, ui.Icons.Clock)
         if ui.itemHovered() then ui.setTooltip("Session timer") end
     end
+    --Flag
 
+    local FlagStr = {
+        'GREEN',
+        'Start',
+        'Yellow',
+        'Slippery',
+        'Pit Close',
+        'BLACK',
+        'SLOW CAR',
+        'Ambulance',
+        'PENALTY',
+        'Failure',
+        'Unsportsmanlike',
+        'StopCancel',
+        'BLUE',
+        'RACE OVER',
+        'WHITE',
+        'SessionSuspended',
+        'Code60',
+    }
+    local FlagColor = {
+        { rgbm.colors.green,  rgbm.colors.white }, -- ac.FlagType.None
+        { rgbm.colors.aqua,   rgbm.colors.black }, -- ac.FlagType.Start
+        { rgbm.colors.yellow, rgbm.colors.black }, --ac.FlagType.Caution
+        { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.Slippery
+        { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.PitLaneClosed
+        { rgbm.colors.black,  rgbm.colors.white }, --ac.FlagType.Stop
+        { rgbm.colors.yellow, rgbm.colors.black }, --ac.FlagType.SlowVehicle
+        { rgbm.colors.red,    rgbm.colors.white }, --ac.FlagType.Ambulance
+        { rgbm.colors.red,    rgbm.colors.white }, --ac.FlagType.ReturnToPits
+        { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.MechanicalFailure
+        { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.Unsportsmanlike
+        { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.StopCancel
+        { rgbm.colors.blue,   rgbm.colors.white }, --ac.FlagType.FasterCar
+        { rgbm.colors.gray,   rgbm.colors.white }, --ac.FlagType.Finished
+        { rgbm.colors.white,  rgbm.colors.black }, --ac.FlagType.OneLapLeft
+        { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.SessionSuspended
+        { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.Code60
+
+    }
+    local flag = session.raceFlagType + 1
+    drawItem(FlagStr[flag], ui.Icons.Flag, FlagColor[flag][1], FlagColor[flag][2])
     ui.popStyleVar()
     ui.popDWriteFont()
 end

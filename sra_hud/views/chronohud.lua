@@ -10,13 +10,12 @@ local function drawItem(text, icon)
     local pos = ui.getCursor()
     local size = vec2(120, 25) * SETTING.scale
     local rectText = vec2(110, 25) * SETTING.scale
-    local bckImage = ".//img//timerbg.png"
     local iconPosX = 10 * SETTING.scale
     local iconPosY = 4 * SETTING.scale
     local iconSize = 18 * SETTING.scale
     local fontSize = 20 * SETTING.scale
 
-    ui.drawImage(bckImage, pos, pos + size, SETTING.styleColor)
+    ui.drawRectFilled(pos, pos + size, SETTING.styleColor, 10 * SETTING.scale)
     ui.dwriteDrawTextClipped(text, fontSize, pos, pos + rectText,
         ui.Alignment.End, ui.Alignment.Center, false, SETTING.fontColor)
     pos.x = pos.x + iconPosX
@@ -26,9 +25,9 @@ local function drawItem(text, icon)
 end
 
 function script.chronoHUD(dt)
-    ui.pushDWriteFont('OneSlot:\\fonts\\.')
-    ui.pushStyleVar(ui.StyleVar.ItemSpacing, 0)
-    drawItem(string.format("%2.3f", CAR.carState.performanceMeter), ".//img//chronodelta.png")
+    ui.pushDWriteFont('OneSlot:/fonts;Weight=Bold')
+    ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
+    drawItem(string.format("%1.3f", CAR.carState.performanceMeter), ".//img//chronodelta.png")
     if ui.itemHovered() then ui.setTooltip("Delta time") end
     drawItem(ac.lapTimeToString(CAR.carState.lapTimeMs), ".//img//chrono.png")
     if ui.itemHovered() then ui.setTooltip("Current lap time") end
