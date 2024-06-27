@@ -27,20 +27,32 @@ end
 function script.chronoHUD(dt)
     ui.pushDWriteFont('OneSlot:/fonts;Weight=Bold')
     ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
-    drawItem(string.format("%1.3f", CAR.carState.performanceMeter), ".//img//chronodelta.png")
-    if ui.itemHovered() then ui.setTooltip("Delta time") end
-    drawItem(ac.lapTimeToString(CAR.carState.lapTimeMs), ".//img//chrono.png")
-    if ui.itemHovered() then ui.setTooltip("Current lap time") end
-    drawItem(ac.lapTimeToString(CAR.carState.estimatedLapTimeMs), ".//img//chronoestimated.png")
-    if ui.itemHovered() then ui.setTooltip("Estimated lap time") end
+    if SETTING.chronoHUD.showDelta then
+        drawItem(string.format("%1.3f", CAR.carState.performanceMeter), ".//img//chronodelta.png")
+        if ui.itemHovered() then ui.setTooltip("Delta time") end
+    end
+    if SETTING.chronoHUD.showCurrent then
+        drawItem(ac.lapTimeToString(CAR.carState.lapTimeMs), ".//img//chrono.png")
+        if ui.itemHovered() then ui.setTooltip("Current lap time") end
+    end
+    if SETTING.chronoHUD.showEstimated then
+        drawItem(ac.lapTimeToString(CAR.carState.estimatedLapTimeMs), ".//img//chronoestimated.png")
+        if ui.itemHovered() then ui.setTooltip("Estimated lap time") end
+    end
 
     if CAR.carID == 0 then
-        drawItem(ac.lapTimeToString(CAR.carState.previousLapTimeMs), ".//img//chronolast.png")
-        if ui.itemHovered() then ui.setTooltip("Lasp lap time") end
-        drawItem(ac.lapTimeToString(CAR.carState.bestLapTimeMs), ".//img//chronobest.png")
-        if ui.itemHovered() then ui.setTooltip("Best session lap time") end
-        drawItem(ac.lapTimeToString(personalBest), ".//img//chronopersonal.png")
-        if ui.itemHovered() then ui.setTooltip("Personal lap time") end
+        if SETTING.chronoHUD.showPrevious then
+            drawItem(ac.lapTimeToString(CAR.carState.previousLapTimeMs), ".//img//chronolast.png")
+            if ui.itemHovered() then ui.setTooltip("Lasp lap time") end
+        end
+        if SETTING.chronoHUD.showPrevious then
+            drawItem(ac.lapTimeToString(CAR.carState.bestLapTimeMs), ".//img//chronobest.png")
+            if ui.itemHovered() then ui.setTooltip("Best session lap time") end
+        end
+        if SETTING.chronoHUD.showPrevious then
+            drawItem(ac.lapTimeToString(personalBest), ".//img//chronopersonal.png")
+            if ui.itemHovered() then ui.setTooltip("Personal lap time") end
+        end
     end
     ui.popStyleVar()
     ui.popDWriteFont()

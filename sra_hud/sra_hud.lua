@@ -11,12 +11,78 @@ require('views/ledhud')
 require('views/poshud')
 require('views/sectorhud')
 require('views/weatherhud')
+require('views/racehud')
 require('classes/settings')
 
 CAR = CarSRA()
 SETTING = Settings()
 
-function script.windowSetup(dt)
+local function tabChrono()
+  if ui.checkbox('Show Delta', SETTING.chronoHUD.showDelta) then
+    SETTING.chronoHUD.showDelta = not SETTING.chronoHUD.showDelta
+  end
+  if ui.checkbox('Show Current', SETTING.chronoHUD.showCurrent) then
+    SETTING.chronoHUD.showCurrent = not SETTING.chronoHUD.showCurrent
+  end
+  if ui.checkbox('Show Estimated', SETTING.chronoHUD.showEstimated) then
+    SETTING.chronoHUD.showEstimated = not SETTING.chronoHUD.showEstimated
+  end
+  if ui.checkbox('Show Previous', SETTING.chronoHUD.showPrevious) then
+    SETTING.chronoHUD.showPrevious = not SETTING.chronoHUD.showPrevious
+  end
+  if ui.checkbox('Show Best Session', SETTING.chronoHUD.showBest) then
+    SETTING.chronoHUD.showBest = not SETTING.chronoHUD.showBest
+  end
+  if ui.checkbox('Show Personal Best', SETTING.chronoHUD.showPersonal) then
+    SETTING.chronoHUD.showPersonal = not SETTING.chronoHUD.showPersonal
+  end
+end
+local function tabWeather()
+  if ui.checkbox('Show Ambient Temperature', SETTING.weatherHUD.showAmbientTemp) then
+    SETTING.weatherHUD.showAmbientTemp = not SETTING.weatherHUD.showAmbientTemp
+  end
+  if ui.checkbox('Show Road Temperature', SETTING.weatherHUD.showRoadTemp) then
+    SETTING.weatherHUD.showRoadTemp = not SETTING.weatherHUD.showRoadTemp
+  end
+  if ui.checkbox('Show Wind Speed', SETTING.weatherHUD.showWindSpeed) then
+    SETTING.weatherHUD.showWindSpeed = not SETTING.weatherHUD.showWindSpeed
+  end
+end
+
+local function tabRace()
+  if ui.checkbox('Show Road Grip', SETTING.raceHUD.showRoadGrip) then
+    SETTING.raceHUD.showRoadGrip = not SETTING.raceHUD.showRoadGrip
+  end
+  if ui.checkbox('Show Fuel Rate', SETTING.raceHUD.showFuelRate) then
+    SETTING.raceHUD.showFuelRate = not SETTING.raceHUD.showFuelRate
+  end
+  if ui.checkbox('Show Damage Rate', SETTING.raceHUD.showDamageRate) then
+    SETTING.raceHUD.showDamageRate = not SETTING.raceHUD.showDamageRate
+  end
+  if ui.checkbox('Show Tyre Rate', SETTING.raceHUD.showTyreRate) then
+    SETTING.raceHUD.showTyreRate = not SETTING.raceHUD.showTyreRate
+  end
+end
+
+local function tabPosition()
+  if ui.checkbox('Show Session', SETTING.positionHUD.showSession) then
+    SETTING.positionHUD.showSession = not SETTING.positionHUD.showSession
+  end
+  if ui.checkbox('Show Position', SETTING.positionHUD.showPosition) then
+    SETTING.positionHUD.showPosition = not SETTING.positionHUD.showPosition
+  end
+  if ui.checkbox('Show Lap Count', SETTING.positionHUD.showLapCount) then
+    SETTING.positionHUD.showLapCount = not SETTING.positionHUD.showLapCount
+  end
+  if ui.checkbox('Show Session Timer', SETTING.positionHUD.showSessionTimer) then
+    SETTING.positionHUD.showSessionTimer = not SETTING.positionHUD.showSessionTimer
+  end
+  if ui.checkbox('Show Flag', SETTING.positionHUD.showFlag) then
+    SETTING.positionHUD.showFlag = not SETTING.positionHUD.showFlag
+  end
+end
+
+local function tabGeneral()
   SETTING.scale = ui.slider('##Scale', SETTING.scale, 1.0, 3.0, 'Scale: %1.1f')
   if ui.colorButton('##StyleColor', SETTING.styleColor, ui.ColorPickerFlags.AlphaBar + ui.ColorPickerFlags.PickerHueBar) then
     SETTING.styleColor = SETTING.styleColor
@@ -29,6 +95,16 @@ function script.windowSetup(dt)
   end
   ui.sameLine()
   ui.text('Font Color')
+end
+
+function script.windowSetup(dt)
+  ui.tabBar('someTabBarID', function()
+    ui.tabItem('HUD', tabGeneral)
+    ui.tabItem('Chrono HUD', tabChrono)
+    ui.tabItem('Weather HUD', tabWeather)
+    ui.tabItem('Race HUD', tabRace)
+    ui.tabItem('Position HUD', tabPosition)
+  end)
 
   ui.separator()
   ui.setCursorX(210)

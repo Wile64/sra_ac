@@ -93,14 +93,46 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <ul>
 <li>Race info</li>
 <li><img src="raceinfo.png" /></li>
+<li>Session</li>
+<li>Position</li>
+<li>Nombre de tour</li>
+<li>Temps de session (online)</li>
+<li>Drapeau</li>
+</ul>
 <li>Heure locale et du serveur</li>
 <li><img src="time.png" /></li>
 <li>Affichage des temoins</li>
 <li><img src="leds.png" /></li>
 <li>Meilleurs tours</li>
 <li><img src="times.png" /></li>
+<ul>
+<li>Delta</li>
+<li>Temps courant</li>
+<li>Temps par sercteur</li>
+<li>Temps dernier tour</li>
+<li>Meilleur temps de session</li>
+<li>Meilleur temps personnel</li>
+</ul>
 <li>Secteurs</li>
 <li><img src="sectors.png" /></li>
+<ul>
+<li>Temps par sercteur</li>
+</ul>
+<li>Condition</li>
+<li><img src="weather.png" /></li>
+<ul>
+<li>Température ambiente</li>
+<li>Température de la piste</li>
+<li>Météo (icone) et vitesse vent </li>
+</ul>
+<li>Race</li>
+<li><img src="race.png" /></li>
+<ul>
+<li>Grip</li>
+<li>Taux de carburant</li>
+<li>Taux de dégat</li>
+<li>Taux d'usure des pneus</li>
+</ul>
 </ul>
 
 **Configuration globale:**
@@ -109,6 +141,7 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Zoom</li>
 <li>Couleur de fond avec alpha</li>
 <li>Couleur de texte</li>
+<li>Afficher/effacer des éléments</li>
 </ul>
 
 ## sra_camera

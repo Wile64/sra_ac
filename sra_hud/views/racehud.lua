@@ -29,23 +29,27 @@ local function drawItem(text, icon, Backcolor, fontColor)
     ui.dummy(size)
 end
 
-function script.weatherHUD(dt)
+function script.raceHUD(dt)
     ui.pushDWriteFont('OneSlot:/fonts;Weight=Bold')
     ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
     local simState = ac.getSim()
-    if SETTING.weatherHUD.showAmbientTemp then
-        drawItem(sf("%.0f°", simState.ambientTemperature), ui.Icons.Thermometer)
-        if ui.itemHovered() then ui.setTooltip("Ambient Temperature") end
-    end
-    if SETTING.weatherHUD.showRoadTemp then
-        drawItem(sf("%.0f°", simState.roadTemperature), ui.Icons.Road)
-        if ui.itemHovered() then ui.setTooltip("Road Temperature") end
-    end
-    if SETTING.weatherHUD.showWindSpeed then
-        drawItem(sf("%.0f Km/h", simState.weatherConditions.wind.speedFrom), ui.weatherIcon(simState.weatherType))
-        if ui.itemHovered() then ui.setTooltip("Wind Speed in Km/h") end
-    end
 
+    if SETTING.raceHUD.showRoadGrip then
+        drawItem(sf("%.2f%%", simState.roadGrip * 100), "/img/road.png")
+        if ui.itemHovered() then ui.setTooltip("Road Grip") end
+    end
+    if SETTING.raceHUD.showFuelRate then
+        drawItem(sf("%.2f%%", simState.fuelConsumptionRate * 100), ui.Icons.Fuel)
+        if ui.itemHovered() then ui.setTooltip("Fuel Rate") end
+    end
+    if SETTING.raceHUD.showDamageRate then
+        drawItem(sf("%.2f%%", simState.mechanicalDamageRate * 100), ui.Icons.Repair)
+        if ui.itemHovered() then ui.setTooltip("Damage Rate") end
+    end
+    if SETTING.raceHUD.showTyreRate then
+        drawItem(sf("%.2f%%", simState.tyreConsumptionRate * 100), "/img/tyre.png")
+        if ui.itemHovered() then ui.setTooltip("Tyre Rate") end
+    end
     ui.popStyleVar()
     ui.popDWriteFont()
 end
