@@ -5,26 +5,47 @@
 local CARS = {}
 local isInitialized = false
 local currentSessionIndex = 0
-local meter = 1 / ac.getSim().trackLengthM
+local isSessionStarted = false
+
 local formationLap = true
 local screen = vec2(ac.getSim().windowWidth, ac.getSim().windowHeight)
-local scale = screen.x / 1920 -- ui.windowSize().x / 1920
-local fontSize = 20 * scale
+local scale = screen.y / 1080
+local fontSize = 35 * scale
+local connectedCar = 0
+local lapProgress = 1
+local aheadDistance = 0
+local focusedCarState = nil
+local greenTimer = 3
+local sideStr = 'left'
+local speedLimte = ac.getSim().speedLimitKmh
+local leaderIndex = 0
+local startLinePast = false
+
+local trackLengthM = ac.getSim().trackLengthM
+local markLimiter = trackLengthM - 300
+local markSide = trackLengthM - 800
 
 local function initialize()
     isInitialized = true
     currentSessionIndex = ac.getSim().currentSessionIndex
     formationLap = true
+    leaderIndex = 0
+    lapProgress = 1
     CARS = {}
-    local index = 1
-    for i, c in ac.iterateCars.leaderboard() do
+    for i = 0, ac.getSim().carsCount - 1 do
         local t = {}
+        local c = ac.getCar(i)
         t.car = c
-        t.index = c.index
-        CARS[index] = t
-        index = index + 1
+        t.index = i
+        CARS[i + 1] = t
+        if t.car.racePosition == 1 then
+            leaderIndex = t.car.index
+        end
     end
+    greenTimer = 3
+    startLinePast = false
     isInitialized = true
+    isSessionStarted = false
     currentSessionIndex = ac.getSim().currentSessionIndex
     ac.log('Initialized')
 end
@@ -36,52 +57,60 @@ if ac.onSessionStart then
 end
 
 local function drawGreen()
-    local uiState = ac.getUI()
-    local size = 30
-    ui.beginTransparentWindow('formationLapGreen', vec2(uiState.windowSize.x / 2.14, uiState.windowSize.y / 5),
-        vec2(size * (2 * 6), size * 2))
-    ui.drawRect(0, vec2(size * (2 * 6), size * 2), rgbm.colors.red)
+    local winSize = vec2(400, (fontSize * 2) * scale)
+    local size = fontSize - 2
+    ui.beginTransparentWindow('formationLapGreen', vec2((screen.x - winSize.x) / 2, screen.y / 4), winSize)
     for i = 0, 5 do
         ui.drawCircleFilled(vec2(size, 0) + vec2(size * (i * 2), size), size, rgbm.colors.green, size)
     end
+    --ui.drawRect(0, winSize, rgbm.colors.red)
+    ui.endTransparentWindow()
+end
+
+local function drawSpeedlimite()
+    local winSize = vec2((fontSize * 2) * scale, (fontSize * 2) * scale)
+    local size = fontSize
+    ui.beginTransparentWindow('formationLapGreen', vec2((screen.x - winSize.x) / 1.89, screen.y / 2.6), winSize)
+    ui.drawCircleFilled(vec2(size, size), size, rgbm.colors.red, size)
+    ui.drawCircleFilled(vec2(size, size), size / 1.2, rgbm.colors.white, size)
+    ui.dwriteDrawTextClipped(tostring(speedLimte), fontSize - 8, 0, winSize, ui.Alignment.Center,
+        ui.Alignment.Center, false, rgbm.colors.blue)
+    --ui.drawRect(0, winSize, rgbm.colors.red)
     ui.endTransparentWindow()
 end
 
 local function drawMessage(title, text)
-    local uiState = ac.getUI()
-    local size = 30
-    ui.beginTransparentWindow('formationLapMsg', vec2(uiState.windowSize.x / 2.151, uiState.windowSize.y / 3),
-        vec2(400, size * 5))
-    --ui.drawRect(0, vec2(400, size * 5), rgbm.colors.red)
-    --ui.drawRect(0, vec2(400, 45), rgbm.colors.green)
-    ui.dwriteDrawTextClipped(title, size, 0, vec2(400, 45), ui.Alignment.Center,
-        ui.Alignment.Start, false, rgbm.colors.blea)
-    ui.drawLine(vec2(0, 45), vec2(400, 45), rgbm.colors.green, 4)
-    --ui.drawRect(vec2(0, 45), vec2(400, 150), rgbm.colors.green)
-    ui.dwriteDrawTextClipped(text, size - 3, vec2(0, 45), vec2(400, 150), ui.Alignment.Center,
+    local winSize = vec2(400, (fontSize * 4) * scale)
+    ui.beginTransparentWindow('formationLapMsg', vec2((screen.x - winSize.x) / 2, screen.y / 3), winSize)
+    --ui.drawRect(0, winSize, rgbm.colors.red)
+    ui.dwriteDrawTextClipped(title, fontSize, 0, vec2(winSize.x, fontSize * 1.5), ui.Alignment.Center,
+        ui.Alignment.Start, false, rgbm.colors.blue)
+    ui.drawLine(vec2(0, fontSize * 1.5), vec2(winSize.x, fontSize * 1.5), rgbm.colors.green, 4)
+    --ui.drawRect(0, vec2(winSize.x, fontSize*1.5), rgbm.colors.red)
+    --ui.drawRect(vec2(0, fontSize*1.5), winSize, rgbm.colors.green)
+    ui.dwriteDrawTextClipped(text, fontSize - 8, vec2(0, fontSize * 1.6), winSize, ui.Alignment.Center,
         ui.Alignment.Start, false, rgbm.colors.white)
     ui.endTransparentWindow()
 end
 
 local function drawState(ahead)
-    local winSize = vec2(150, fontSize * scale)
-    ui.beginTransparentWindow('formationLapState', vec2((screen.x - winSize.x) / 2, screen.y / 2), winSize)
+    local winSize = vec2(150, (fontSize * 5) * scale)
+    ui.beginTransparentWindow('formationLapState', vec2((screen.x - winSize.x) / 2, screen.y / 1.8), winSize)
     ui.drawRect(0, winSize, rgbm.colors.red)
-    ui.dwriteDrawTextClipped("stay in the middle", fontSize - 43, 0, winSize, ui.Alignment.Center,
+    ui.dwriteDrawTextClipped("stay in the middle", fontSize / 2, 0, winSize, ui.Alignment.Center,
         ui.Alignment.Start, false, rgbm.colors.white)
-    local lenMax = math.min(50, ahead) * 2
-    local minAhead = 8
+    local lenMax = math.min(100, ahead) * 2
+    local minAhead = fontSize * scale
     local carColor = rgbm.colors.green
-    if lenMax < minAhead * scale then
+    local carSize = vec2(fontSize, fontSize * 1.5)
+    if lenMax < minAhead then
         carColor = rgbm.colors.red
-    elseif lenMax > winSize.y - (35 * scale) then
+    elseif lenMax >= winSize.y - (minAhead + carSize.y) then
         carColor = rgbm.colors.blue
     end
-    local carSize = vec2(15 * scale, 25 * scale)
     local carPos = vec2((winSize.x - carSize.x) / 2, (1 + lenMax))
-    ui.drawLine(vec2(5 * scale, minAhead * scale), vec2(winSize.x - (5 * scale), minAhead * scale), rgbm.colors.red,
-        1.3 * scale)
-    ui.drawLine(vec2(5 * scale, winSize.y - (10 * scale)), vec2(winSize.x - (5 * scale), winSize.y - (10 * scale)),
+    ui.drawLine(vec2(5 * scale, minAhead), vec2(winSize.x - (5 * scale), minAhead), rgbm.colors.red, 4)
+    ui.drawLine(vec2(5 * scale, winSize.y - (minAhead)), vec2(winSize.x - (5 * scale), winSize.y - (minAhead)),
         rgbm.colors.red, 4)
     ui.drawRectFilled(carPos, carPos + carSize, carColor)
     ui.endTransparentWindow()
@@ -90,7 +119,7 @@ end
 function script.update(dt)
     local sim = ac.getSim()
     -- Check if online
-    --if not sim.isOnlineRace then return end
+    if not sim.isOnlineRace then return end
 
     -- check if Race
     if sim.raceSessionType ~= 3 then return end
@@ -99,75 +128,95 @@ function script.update(dt)
         isInitialized = false
     end
 
+    -- check if race started
+    if not sim.isSessionStarted then return end
+    isSessionStarted = true
+
     if not isInitialized then
         -- initialize one time on start
         initialize()
     end
 
-    -- check if race started
-    if not sim.isSessionStarted then return end
-
     if not formationLap then return end
 
-    -- update car data
-    for i = 1, #CARS do
-        CARS[i].car = ac.getCar(CARS[i].index)
+    if ac.getCar(0).splinePosition < 0.001 then
+        startLinePast = true
     end
 
+    -- update car data
+    connectedCar = 0
+    for i = 1, #CARS do
+        CARS[i].car = ac.getCar(CARS[i].index)
+        if CARS[i].car.isActive then
+            connectedCar = connectedCar + 1
+        end
+    end
+
+    focusedCarState = ac.getCar(0)
+
+    local currentPositionM = CARS[leaderIndex].car.splinePosition * trackLengthM
+    if currentPositionM <= markSide then
+        lapProgress = 1
+    elseif currentPositionM >= markLimiter then
+        lapProgress = 3
+    elseif currentPositionM >= markSide then
+        lapProgress = 2
+    end
+
+    if CARS[leaderIndex].car.lapCount >= 1 then
+        lapProgress = 4
+        greenTimer = 1
+    end
+    if lapProgress == 3 then
+        if focusedCarState.speedKmh > speedLimte + 2 then
+            physics.setCarPenalty(ac.PenaltyType.MandatoryPits, 5)
+        end
+    end
+
+    if focusedCarState.racePosition > 1 and connectedCar > 1 then
+        --    local gap = ac.getGapBetweenCars(CARS[focusedState.racePosition - 1].car.index, focusedState.index)
+        --    ui.text(string.format('gap before %0.3f', gap))
+        aheadDistance = focusedCarState.position:distance(CARS[focusedCarState.racePosition - 1].car.position)
+    end
+    if focusedCarState.racePosition % 2 == 0 then
+        sideStr = "right"
+    else
+        sideStr = "left"
+    end
 end
 
 function script.drawUI()
     if not formationLap then return end
-    local focused = ac.getCar(ac.getSim().focusedCar).racePosition
-    local focusedState = CARS[focused].car
-    local side
-    if focusedState.racePosition % 2 == 0 then
-        ui.text(string.format("Right State"))
-        side = "right"
-    else
-        ui.text(string.format("Left State"))
-        side = "left"
-    end
-    local uiState = ac.getUI()
-    local size = 30
-    ui.beginTransparentWindow('formationLapMsg', vec2(uiState.windowSize.x / 2.151, uiState.windowSize.y / 3),
-        vec2(400, size * 5))
-    if CARS[1].car.splinePosition <= (1 - (meter * 500)) then
-        ui.dwriteDrawTextClipped("Formation Lap", size, 0, vec2(400, 45), ui.Alignment.Center,
-        ui.Alignment.Start, false, rgbm.colors.blea)
-        ui.dwriteDrawTextClipped("Line up single file", size - 3, vec2(0, 45), vec2(400, 150), ui.Alignment.Center,
-        ui.Alignment.Start, false, rgbm.colors.white)
-        -- last 400 meters on double file
-    elseif CARS[1].car.splinePosition <= (1 - (meter * 400)) then
-        ui.dwriteDrawTextClipped("Formation Lap", size, 0, vec2(400, 45), ui.Alignment.Center,
-        ui.Alignment.Start, false, rgbm.colors.blea)
-        ui.dwriteDrawTextClipped("Align on double\rfile Keep " .. side, size - 3, vec2(0, 45), vec2(400, 150), ui.Alignment.Center,
-        ui.Alignment.Start, false, rgbm.colors.white)
-
-        -- last 200 meters with pit limiter
-    elseif CARS[1].car.splinePosition <= (1 - (meter * 200)) then
-        ui.dwriteDrawTextClipped("Formation Lap", size, 0, vec2(400, 45), ui.Alignment.Center,
-        ui.Alignment.Start, false, rgbm.colors.blea)
-        ui.dwriteDrawTextClipped("Speed Limiter on", size - 3, vec2(0, 45), vec2(400, 150), ui.Alignment.Center,
-        ui.Alignment.Start, false, rgbm.colors.white)        
-    end
-    ui.drawLine(vec2(0, 45), vec2(400, 45), rgbm.colors.green, 4)
-    ui.endTransparentWindow()
-
+    if not isSessionStarted then return end
+    if not startLinePast then return end
+    
     -- follow the leader's progress
 
+    if lapProgress == 1 then
+        drawMessage("Formation Lap", "Line up single file")
+        -- last 400 meters on double file
+    elseif lapProgress == 2 then
+        drawMessage("Formation Lap", "Align on double file\n Keep " .. sideStr)
+        -- last 200 meters with pit limiter
+    elseif lapProgress == 3 then
+        drawMessage("Formation Lap", "Speed Limiter on")
+        drawSpeedlimite()
+    end
 
     -- if the leader crosses the line, announces the GREEN FLAGS
-    if CARS[1].car.lapCount >= 1 then
-        drawMessage("Formation Lap", "Green flag Race start")
+    if lapProgress == 4 then
+        drawMessage("Formation Lap", "Green flag Race start\ngo... go... go...")
         drawGreen()
-        formationLap = false
+        greenTimer = greenTimer - ui.deltaTime()
+
+        if greenTimer <= 0 then
+            formationLap = false
+        end
     end
     -- Gap Calculation
-    if focusedState.racePosition > 1 then
-        --    local gap = ac.getGapBetweenCars(CARS[focusedState.racePosition - 1].car.index, focusedState.index)
-        --    ui.text(string.format('gap before %0.3f', gap))
-        local ahead = focusedState.position:distance(CARS[focusedState.racePosition - 1].car.position)
-        drawState(ahead)
+    if focusedCarState ~= nil then
+        if focusedCarState.racePosition > 1 and connectedCar > 1 then
+            drawState(aheadDistance)
+        end
     end
 end
