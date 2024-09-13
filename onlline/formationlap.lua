@@ -164,7 +164,7 @@ function script.update(dt)
 
     focusedCarState = ac.getCar(0)
 
-    local currentPositionM = CARS[leaderIndex].car.splinePosition * trackLengthM
+    local currentPositionM = CARS[leaderIndex+1].car.splinePosition * trackLengthM
     if currentPositionM <= markSide then
         lapProgress = 1
     elseif currentPositionM >= markLimiter then
