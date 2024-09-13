@@ -2,6 +2,8 @@
 -- Created by Wile64 on september 2024
 --
 
+DEBUG = true
+
 local CARS = {}
 local isInitialized = false
 local currentSessionIndex = 0
@@ -15,7 +17,7 @@ local connectedCar = 0
 local lapProgress = 1
 local aheadDistance = 0
 local focusedCarState = nil
-local greenTimer = 3
+local greenTimer = 2
 local sideStr = 'left'
 local speedLimte = ac.getSim().speedLimitKmh
 local leaderIndex = 0
@@ -23,6 +25,7 @@ local startLinePast = false
 
 local trackLengthM = ac.getSim().trackLengthM
 local markLimiter = trackLengthM - 300
+local markCareLimiter = trackLengthM - 400
 local markSide = trackLengthM - 800
 
 local function initialize()
@@ -35,14 +38,18 @@ local function initialize()
     for i = 0, ac.getSim().carsCount - 1 do
         local t = {}
         local c = ac.getCar(i)
-        t.car = c
-        t.index = i
-        CARS[i + 1] = t
-        if t.car.racePosition == 1 then
-            leaderIndex = t.car.index
+        if c ~= nil then
+            t.car = c
+            t.index = t.car.index
+            CARS[i + 1] = t
+            if t.car.racePosition == 1 then
+                leaderIndex = t.car.index
+            end
+        else
+            CARS[i + 1] = nil
         end
     end
-    greenTimer = 3
+    greenTimer = 2
     startLinePast = false
     isInitialized = true
     isSessionStarted = false
@@ -126,11 +133,83 @@ local function drawState(ahead)
     ui.endTransparentWindow()
 end
 
+
+local function drawDebug()
+    local winSize = vec2(300, 400)
+    ui.beginToolWindow('formationLapState', vec2((screen.x - winSize.x) / 3.5, screen.y / 3), winSize)
+    --ui.drawRectFilled(0, winSize, rgbm.colors.gray)
+    ui.text(string.format("isInitialized : %s", isInitialized))
+    ui.text(string.format("formationLap : %s", formationLap))
+    ui.text(string.format("currentSessionIndex : %s", currentSessionIndex))
+    ui.text(string.format("carcount : %0.0f ", #CARS))
+    ui.text(string.format("connectedCar : %0.0f ", connectedCar))
+    ui.text(string.format("isSessionStarted : %s", isSessionStarted))
+    ui.text(string.format("leaderIndex : %0.0f", leaderIndex))
+    ui.text(string.format("startLinePast : %s", startLinePast))
+    ui.text(string.format("lapProgress : %d", lapProgress))
+    ui.text(string.format("greenTimer : %0.3f", greenTimer))
+    ui.text(string.format("lapcount : %d", ac.getCar(0).lapCount))
+    for i = 1, #CARS do
+        if CARS[i] ~= nil then
+            ui.text(string.format("list : %d %d %d", i, CARS[i].index, CARS[i].car.racePosition))
+        end
+    end
+    ui.endToolWindow()
+end
+
+
+function script.drawUI()
+    if DEBUG then
+        drawDebug()
+    end
+    if not formationLap then return end
+    if not isSessionStarted then return end
+    if not startLinePast then return end
+    if DEBUG then
+        drawDebug()
+    end
+
+    -- follow the leader's progress
+
+    if lapProgress == 1 then
+        drawMessage("Formation Lap", "Line up single file")
+        -- last 400 meters on double file
+    elseif lapProgress == 2 then
+        drawMessage("Formation Lap", "Align on double file\n Keep " .. sideStr)
+        -- last 200 meters with pit limiter
+    elseif lapProgress == 3 then
+        drawMessage("Formation Lap", "Speed Limiter on")
+        drawSpeedlimite()
+    elseif lapProgress == 4 then
+        drawMessage("Formation Lap", "speed limit on 100 meters")
+        drawSpeedlimite()
+    end
+
+    -- if the leader crosses the line, announces the GREEN FLAGS
+    if lapProgress == 5 then
+        drawMessage("Formation Lap", "Green flag Race start\ngo... go... go...")
+        drawGreen()
+    end
+    -- Gap Calculation
+    if focusedCarState ~= nil then
+        if focusedCarState.racePosition > 1 and connectedCar > 1 then
+            drawState(aheadDistance)
+        end
+    end
+end
+
 function script.update(dt)
     local sim = ac.getSim()
     -- Check if online
     if not sim.isOnlineRace then return end
-
+    -- update car data
+    connectedCar = 0
+    for i = 1, #CARS do
+        CARS[i].car = ac.getCar(CARS[i].index)
+        if CARS[i].car.isActive then
+            connectedCar = connectedCar + 1
+        end
+    end
     -- check if Race
     if sim.raceSessionType ~= 3 then return end
 
@@ -153,30 +232,35 @@ function script.update(dt)
         startLinePast = true
     end
 
-    -- update car data
-    connectedCar = 0
-    for i = 1, #CARS do
-        CARS[i].car = ac.getCar(CARS[i].index)
-        if CARS[i].car.isActive then
-            connectedCar = connectedCar + 1
+    focusedCarState = ac.getCar(0)
+
+    if connectedCar == 1 then
+        leaderIndex = 0
+    end
+
+    if focusedCarState.lapCount >= 1 then
+        lapProgress = 5
+    end
+
+    -- end formationLap ?
+    if lapProgress == 5 then
+        greenTimer = greenTimer - dt
+        if greenTimer <= 0 then
+            formationLap = false
+        end
+    else
+        local currentPositionM = CARS[leaderIndex + 1].car.splinePosition * trackLengthM
+        if currentPositionM <= markSide then
+            lapProgress = 1
+        elseif currentPositionM >= markLimiter then
+            lapProgress = 3
+        elseif currentPositionM >= markCareLimiter then
+            lapProgress = 4
+        elseif currentPositionM >= markSide then
+            lapProgress = 2
         end
     end
 
-    focusedCarState = ac.getCar(0)
-
-    local currentPositionM = CARS[leaderIndex+1].car.splinePosition * trackLengthM
-    if currentPositionM <= markSide then
-        lapProgress = 1
-    elseif currentPositionM >= markLimiter then
-        lapProgress = 3
-    elseif currentPositionM >= markSide then
-        lapProgress = 2
-    end
-
-    if CARS[leaderIndex].car.lapCount >= 1 then
-        lapProgress = 4
-        greenTimer = 1
-    end
     if lapProgress == 3 then
         if focusedCarState.speedKmh > speedLimte + 2 then
             physics.setCarPenalty(ac.PenaltyType.MandatoryPits, 5)
@@ -192,41 +276,5 @@ function script.update(dt)
         sideStr = "right"
     else
         sideStr = "left"
-    end
-end
-
-function script.drawUI()
-    if not formationLap then return end
-    if not isSessionStarted then return end
-    if not startLinePast then return end
-
-    -- follow the leader's progress
-
-    if lapProgress == 1 then
-        drawMessage("Formation Lap", "Line up single file")
-        -- last 400 meters on double file
-    elseif lapProgress == 2 then
-        drawMessage("Formation Lap", "Align on double file\n Keep " .. sideStr)
-        -- last 200 meters with pit limiter
-    elseif lapProgress == 3 then
-        drawMessage("Formation Lap", "Speed Limiter on")
-        drawSpeedlimite()
-    end
-
-    -- if the leader crosses the line, announces the GREEN FLAGS
-    if lapProgress == 4 then
-        drawMessage("Formation Lap", "Green flag Race start\ngo... go... go...")
-        drawGreen()
-        greenTimer = greenTimer - ui.deltaTime()
-
-        if greenTimer <= 0 then
-            formationLap = false
-        end
-    end
-    -- Gap Calculation
-    if focusedCarState ~= nil then
-        if focusedCarState.racePosition > 1 and connectedCar > 1 then
-            drawState(aheadDistance)
-        end
     end
 end
