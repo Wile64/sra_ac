@@ -56,6 +56,16 @@ if ac.onSessionStart then
     end)
 end
 
+if ac.onOnlineWelcome then
+    ac.onOnlineWelcome(function()
+        ac.log('onOnlineWelcome')
+        -- Race started when connect
+        if ac.getSim().isSessionStarted then
+            formationLap = false
+        end
+    end)
+end
+
 local function drawGreen()
     local winSize = vec2(400, (fontSize * 2) * scale)
     local size = fontSize - 2
@@ -189,7 +199,7 @@ function script.drawUI()
     if not formationLap then return end
     if not isSessionStarted then return end
     if not startLinePast then return end
-    
+
     -- follow the leader's progress
 
     if lapProgress == 1 then
