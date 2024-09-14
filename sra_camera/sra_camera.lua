@@ -2,12 +2,14 @@
 -- Created by Wile64 on october 2023
 --
 
--- https://github.com/ac-custom-shaders-patch/acc-lua-sdk/blob/main/.definitions/ac_common.txt
-
-VERSION = 1.001
+VERSION = 1.02
 local randomTimer = 5.0
 local randomTimerOn = false
 local timerKey = 0
+
+local isSessionStarted = false
+local TeleportToPits = false
+
 local function drawKeyValue(key, value)
   ui.text(key)
   ui.sameLine()
@@ -41,12 +43,22 @@ local function randomCamera()
   end
 end
 
-local function setimer()
+local function setTimer()
   clearInterval(timerKey)
   timerKey = setInterval(function() if randomTimerOn then randomCamera() end end, randomTimer, '#timer')
 end
+
+function script.update()
+  if isSessionStarted ~= ac.getSim().isSessionStarted then
+    isSessionStarted = ac.getSim().isSessionStarted
+    if not ac.getCar(0).isInPit and TeleportToPits then
+      ac.tryToTeleportToPits()
+    end
+  end
+end
+
 function script.windowMain(dt)
-  ac.setWindowTitle('windowMain', string.format('SRA Camera v%2.3f', VERSION))
+  ac.setWindowTitle('windowMain', string.format('SRA Camera v%2.2f', VERSION))
   local cameraView = {
     { 'Cockpit (F1)',         ac.CameraMode.Cockpit },
     { 'Car (F6)',             ac.CameraMode.Car },
@@ -97,7 +109,7 @@ function script.windowMain(dt)
     randomTimerOn = not randomTimerOn
     if randomTimerOn then
       randomCamera()
-      setimer()
+      setTimer()
     else
       clearInterval(timerKey)
     end
@@ -105,7 +117,7 @@ function script.windowMain(dt)
   local newScale = ui.slider('##TimerSlider', randomTimer, 10, 120, 'Timer: %1.0f%')
   if ui.itemEdited() then
     randomTimer = newScale
-    setimer()
+    setTimer()
   end
   ui.nextColumn()
 
@@ -170,6 +182,13 @@ function script.windowMain(dt)
     ui.text(' -  Arrow Keys move Camera')
     ui.text(' *  Shift and arrow for slow move')
     ui.text(' *  Control and arrow for fast move')
+  end
+  ui.nextColumn()
+  ui.newLine(1)
+  ui.separator()
+  ui.header("Options for spectators, your car is teleported\ninto the pits at the start of the session")
+  if ui.checkbox("Auto Teleport To Pits on start session", TeleportToPits) then
+    TeleportToPits = not TeleportToPits
   end
 end
 
