@@ -2,71 +2,97 @@
 -- Created by Wile64 on september 2024
 --
 
-DEBUG = true
-
+-- Enable or disable the debug mode
+DEBUG = false
+-- List of all cars
 local CARS = {}
+-- Is variables Initialized ?
 local isInitialized = false
+-- Current session index
 local currentSessionIndex = 0
-local isSessionStarted = false
+-- Is the race started ?
+local isSessionStarted = nil
 
 local formationLap = true
+-- Screen resolution
 local screen = vec2(ac.getSim().windowWidth, ac.getSim().windowHeight)
+-- Scale for UI
 local scale = screen.y / 1080
+-- Default font size
 local fontSize = 35 * scale
+-- How many car is connected
 local connectedCar = 0
-local lapProgress = 1
+-- Steps during the formation lap
+local lapSteps = 1
+-- Distance to the car ahead
 local aheadDistance = 0
-local focusedCarState = nil
+-- Timer for displaying the start
 local greenTimer = 2
+-- Runway side label
 local sideStr = 'left'
-local speedLimte = ac.getSim().speedLimitKmh
-local leaderIndex = 0
-local startLinePast = false
-
+-- Speed limiter in Kmh
+local speedLimte = sim.speedLimitKmh
+-- Did the driver cross the starting line?
+local isCrossedStartLine = nil
+-- show the radar
+local isShowRadar = false
+-- track length in meters
 local trackLengthM = ac.getSim().trackLengthM
+
+-- Mark where to start the limter (300 meters before end track)
 local markLimiter = trackLengthM - 300
+-- Mark Warning of the area to speed limiter (400 meters before end track)
 local markCareLimiter = trackLengthM - 400
+-- Mark for riding in double line (800 meters before end track)
 local markSide = trackLengthM - 800
 
+local function debug(text)
+    if DEBUG then
+        ac.log(string.format("%s: %s", os.date("%X"), text))
+    end
+end
+
+local function getleaderboard()
+    CARS = {}
+    connectedCar = 0
+    for i, c in ac.iterateCars.leaderboard() do
+        local t = {}
+        t.car = c
+        t.index = t.car.index
+        t.startPosition = t.car.racePosition
+        if t.car.racePosition == 1 then
+            leaderIndex = t.car.index
+        end
+        if t.car.isActive then
+            connectedCar = connectedCar + 1
+        end
+        CARS[i] = t
+    end
+end
 local function initialize()
-    isInitialized = true
-    currentSessionIndex = ac.getSim().currentSessionIndex
+    getleaderboard()
     formationLap = true
     leaderIndex = 0
-    lapProgress = 1
-    CARS = {}
-    for i = 0, ac.getSim().carsCount - 1 do
-        local t = {}
-        local c = ac.getCar(i)
-        if c ~= nil then
-            t.car = c
-            t.index = t.car.index
-            CARS[i + 1] = t
-            if t.car.racePosition == 1 then
-                leaderIndex = t.car.index
-            end
-        else
-            CARS[i + 1] = nil
-        end
-    end
+    lapSteps = 1
     greenTimer = 2
-    startLinePast = false
-    isInitialized = true
-    isSessionStarted = false
+    isCrossedStartLine = false
     currentSessionIndex = ac.getSim().currentSessionIndex
-    ac.log('Initialized')
+    isInitialized = true
+    debug('Initialized')
 end
 
 if ac.onSessionStart then
     ac.onSessionStart(function()
+        debug('New session start')
         initialize()
     end)
 end
 
 if ac.onOnlineWelcome then
     ac.onOnlineWelcome(function()
-        ac.log('onOnlineWelcome')
+        debug('Join online server')
         -- Race started when connect
+        initialize()
         if ac.getSim().isSessionStarted then
             formationLap = false
         end
@@ -87,7 +113,7 @@ end
 local function drawSpeedlimite()
     local winSize = vec2((fontSize * 2) * scale, (fontSize * 2) * scale)
     local size = fontSize
-    ui.beginTransparentWindow('formationLapGreen', vec2((screen.x - winSize.x) / 1.89, screen.y / 2.6), winSize)
+    ui.beginTransparentWindow('formationLapGreen', vec2((screen.x - winSize.x) / 1.845, screen.y / 2.9), winSize)
     ui.drawCircleFilled(vec2(size, size), size, rgbm.colors.red, size)
     ui.drawCircleFilled(vec2(size, size), size / 1.2, rgbm.colors.white, size)
     ui.dwriteDrawTextClipped(tostring(speedLimte), fontSize - 8, 0, winSize, ui.Alignment.Center,
@@ -110,7 +136,7 @@ local function drawMessage(title, text)
     ui.endTransparentWindow()
 end
 
-local function drawState(ahead)
+local function drawRadar(ahead)
     local winSize = vec2(150, (fontSize * 5) * scale)
     ui.beginTransparentWindow('formationLapState', vec2((screen.x - winSize.x) / 2, screen.y / 1.8), winSize)
     ui.drawRect(0, winSize, rgbm.colors.red)
@@ -133,11 +159,9 @@ local function drawState(ahead)
     ui.endTransparentWindow()
 end
 
-
 local function drawDebug()
-    local winSize = vec2(300, 400)
-    ui.beginToolWindow('formationLapState', vec2((screen.x - winSize.x) / 3.5, screen.y / 3), winSize)
-    --ui.drawRectFilled(0, winSize, rgbm.colors.gray)
+    local winSize = vec2(300, 800)
+    ui.beginToolWindow('formationLapState', vec2((screen.x - winSize.x) / 3.5, 150), winSize)
     ui.text(string.format("isInitialized : %s", isInitialized))
     ui.text(string.format("formationLap : %s", formationLap))
     ui.text(string.format("currentSessionIndex : %s", currentSessionIndex))
@@ -145,18 +169,21 @@ local function drawDebug()
     ui.text(string.format("connectedCar : %0.0f ", connectedCar))
     ui.text(string.format("isSessionStarted : %s", isSessionStarted))
     ui.text(string.format("leaderIndex : %0.0f", leaderIndex))
-    ui.text(string.format("startLinePast : %s", startLinePast))
-    ui.text(string.format("lapProgress : %d", lapProgress))
+    ui.text(string.format("isCrossedStartLine : %s", isCrossedStartLine))
+    ui.text(string.format("lapSteps : %d", lapSteps))
     ui.text(string.format("greenTimer : %0.3f", greenTimer))
     ui.text(string.format("lapcount : %d", ac.getCar(0).lapCount))
+    ui.text(string.format("aheadDistance : %d", aheadDistance))
+    ui.newLine()
     for i = 1, #CARS do
         if CARS[i] ~= nil then
-            ui.text(string.format("list : %d %d %d", i, CARS[i].index, CARS[i].car.racePosition))
+            ui.text(string.format("startPosition: %d racePosition: %d, %s", CARS[i].startPosition,
+                CARS[i].car.racePosition,
+                ac.getDriverName(CARS[i].index)))
         end
     end
     ui.endToolWindow()
 end
-
 
 function script.drawUI()
     if DEBUG then
@@ -164,117 +191,118 @@ function script.drawUI()
     end
     if not formationLap then return end
     if not isSessionStarted then return end
-    if not startLinePast then return end
-    if DEBUG then
-        drawDebug()
-    end
+    if not isCrossedStartLine then return end
 
-    -- follow the leader's progress
 
-    if lapProgress == 1 then
+    -- follow the lap progress
+    if lapSteps == 1 then
+        -- Step 1, run in single file
         drawMessage("Formation Lap", "Line up single file")
-        -- last 400 meters on double file
-    elseif lapProgress == 2 then
+    elseif lapSteps == 2 then
+        -- Step 2, run in double file
         drawMessage("Formation Lap", "Align on double file\n Keep " .. sideStr)
-        -- last 200 meters with pit limiter
-    elseif lapProgress == 3 then
-        drawMessage("Formation Lap", "Speed Limiter on")
+    elseif lapSteps == 3 then
+        -- Step 3, run with the speed limiter
+        drawMessage("Formation Lap", "Speed Limiter on\n Keep " .. sideStr)
         drawSpeedlimite()
-    elseif lapProgress == 4 then
-        drawMessage("Formation Lap", "speed limit on 100 meters")
+    elseif lapSteps == 4 then
+        -- Step 4, warning about the limiter zone
+        drawMessage("Formation Lap", "speed limit at 100 meters\n Keep " .. sideStr)
         drawSpeedlimite()
     end
 
-    -- if the leader crosses the line, announces the GREEN FLAGS
-    if lapProgress == 5 then
+    if lapSteps == 5 then
+        -- Step 5, Formation lap ended, run
         drawMessage("Formation Lap", "Green flag Race start\ngo... go... go...")
         drawGreen()
     end
-    -- Gap Calculation
-    if focusedCarState ~= nil then
-        if focusedCarState.racePosition > 1 and connectedCar > 1 then
-            drawState(aheadDistance)
-        end
+    -- show the radar between ahead car
+    if isShowRadar then
+        drawRadar(aheadDistance)
     end
 end
 
-function script.update(dt)
-    local sim = ac.getSim()
-    -- Check if online
-    if not sim.isOnlineRace then return end
-    -- update car data
-    connectedCar = 0
-    for i = 1, #CARS do
-        CARS[i].car = ac.getCar(CARS[i].index)
-        if CARS[i].car.isActive then
-            connectedCar = connectedCar + 1
-        end
-    end
-    -- check if Race
-    if sim.raceSessionType ~= 3 then return end
+function script.prepare(dt)
+    debug('speed')
+    return false
+end
 
-    if sim.currentSessionIndex ~= currentSessionIndex then
-        isInitialized = false
-    end
+function script.update(dt)
+    -- Exit if not online and not race
+    if not sim.isOnlineRace and sim.raceSessionType ~= 3 then return end
 
     -- check if race started
-    if not sim.isSessionStarted then return end
-    isSessionStarted = true
-
-    if not isInitialized then
-        -- initialize one time on start
+    if isSessionStarted ~= sim.isSessionStarted then
+        isSessionStarted = sim.isSessionStarted
+        debug("Race started " .. tostring(isSessionStarted))
         initialize()
     end
 
-    if not formationLap then return end
+    if isSessionStarted and formationLap then
+        -- Get the stateCar of current car, always 0
+        local focusedCarState = nil
+        focusedCarState = ac.getCar(0)
 
-    if ac.getCar(0).splinePosition < 0.001 then
-        startLinePast = true
-    end
-
-    focusedCarState = ac.getCar(0)
-
-    if connectedCar == 1 then
-        leaderIndex = 0
-    end
-
-    if focusedCarState.lapCount >= 1 then
-        lapProgress = 5
-    end
-
-    -- end formationLap ?
-    if lapProgress == 5 then
-        greenTimer = greenTimer - dt
-        if greenTimer <= 0 then
-            formationLap = false
+        -- Check if the car crossed start line
+        if focusedCarState.splinePosition < 0.001 and not focusedCarState.isInPit then
+            isCrossedStartLine = true
+            debug("Crossed start line")
         end
-    else
-        local currentPositionM = CARS[leaderIndex + 1].car.splinePosition * trackLengthM
-        if currentPositionM <= markSide then
-            lapProgress = 1
-        elseif currentPositionM >= markLimiter then
-            lapProgress = 3
-        elseif currentPositionM >= markCareLimiter then
-            lapProgress = 4
-        elseif currentPositionM >= markSide then
-            lapProgress = 2
-        end
-    end
 
-    if lapProgress == 3 then
-        if focusedCarState.speedKmh > speedLimte + 2 then
-            physics.setCarPenalty(ac.PenaltyType.MandatoryPits, 5)
+        -- If lap is 1 or more, switch to step 5 (end formation lap)
+        if focusedCarState.lapCount >= 1 then
+            lapSteps = 5
+            debug("Step 5")
         end
-    end
 
-    if focusedCarState.racePosition > 1 and connectedCar > 1 then
-        --    local gap = ac.getGapBetweenCars(CARS[focusedState.racePosition - 1].car.index, focusedState.index)
-        --    ui.text(string.format('gap before %0.3f', gap))
-        aheadDistance = focusedCarState.position:distance(CARS[focusedCarState.racePosition - 1].car.position)
-    end
-    if focusedCarState.racePosition % 2 == 0 then
-        sideStr = "right"
-    else
-        sideStr = "left"
+        -- update car data and count connected cars
+        getleaderboard()
+
+        -- On step 5, decrease the counter of green flag
+        if lapSteps == 5 then
+            greenTimer = greenTimer - dt
+            if greenTimer <= 0 then
+                -- Formation lap is ended
+                formationLap = false
+            end
+        else
+            local currentPositionM = CARS[1].car.splinePosition * trackLengthM
+
+            if currentPositionM <= markSide then
+                -- As long as you are not at the first mark, you ride in single file
+                lapSteps = 1
+            elseif currentPositionM >= markLimiter then
+                -- The speed limiter mark has passed, activate the speed limiter
+                lapSteps = 3
+            elseif currentPositionM >= markCareLimiter then
+                -- The zone limiter mark has passed, the speed limit zone is coming
+                lapSteps = 4
+            elseif currentPositionM >= markSide then
+                -- The side mark has passed, drive in double file
+                lapSteps = 2
+            end
+        end
+
+        if lapSteps == 3 then
+            -- Speed ​​control on limiter zone
+            if (focusedCarState.speedKmh > speedLimte + 2) and sim.isOnlineRace then
+                physics.setCarPenalty(ac.PenaltyType.MandatoryPits, 5)
+            end
+        end
+
+        if focusedCarState.racePosition > 1 and connectedCar > 1 then
+            -- Calculate the distance to the car in front
+            aheadDistance = focusedCarState.position:distance(CARS[focusedCarState.racePosition - 1].car.position)
+            isShowRadar = true
+        else
+            isShowRadar = false
+        end
+
+        -- Even positions are on the right, odd positions are on the left
+        if focusedCarState.racePosition % 2 == 0 then
+            sideStr = "right"
+        else
+            sideStr = "left"
+        end
     end
 end
