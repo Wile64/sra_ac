@@ -28,8 +28,7 @@ local lapSteps = 1
 local aheadDistance = 0
 -- Timer for displaying the green start
 local greenStartTimer = 2
--- Runway side label
-local sideStr = 'left'
+
 -- Speed limiter in Kmh for show in screen
 local speedLimte = ac.getSim().speedLimitKmh
 -- Did the driver cross the starting line?
@@ -38,6 +37,11 @@ local isCrossedStartLine = nil
 local isShowRadar = false
 -- Track length in meters
 local trackLengthM = ac.getSim().trackLengthM
+--Side in start position grid (1 = left, -1 = right)
+local leaderSideStart = ac.INIConfig.load(ac.getFolder(ac.FolderID.ContentTracks) ..
+    '/' .. ac.getTrackFullID('/') .. '/data/crew.ini'):get('HEADER', 'SIDE', -1)
+-- Runway side label
+local runwaySide = 'right'
 
 -- Mark where to start the limter (300 meters before end track)
 local markLimiter = trackLengthM - 300
@@ -192,6 +196,10 @@ local function drawDebug()
     ui.text(string.format("lapcount : %d", ac.getCar(0).lapCount))
     ui.text(string.format("aheadDistance : %d", aheadDistance))
     ui.text(string.format("raceSessionType : %d", ac.getSim().raceSessionType))
+    ui.text(string.format("sideStr : %s", runwaySide))
+
+    ui.text(string.format("startSide : %d", leaderSideStart))
+
 
     ui.newLine()
     for i = 1, #leaderboard do
@@ -217,14 +225,14 @@ function script.drawUI()
         drawMessage("Formation Lap", "Line up single file")
     elseif lapSteps == 2 then
         -- Step 2, run in double file
-        drawMessage("Formation Lap", "Align on double file\n Keep " .. sideStr)
+        drawMessage("Formation Lap", "Align on double file\n Keep " .. runwaySide)
     elseif lapSteps == 3 then
         -- Step 3, run with the speed limiter
-        drawMessage("Formation Lap", "Speed Limiter on\n Keep " .. sideStr)
+        drawMessage("Formation Lap", "Speed Limiter on\n Keep " .. runwaySide)
         drawSpeedlimite()
     elseif lapSteps == 4 then
         -- Step 4, warning about the limiter zone
-        drawMessage("Formation Lap", "speed limit at 100 meters\n Keep " .. sideStr)
+        drawMessage("Formation Lap", "speed limit at 100 meters\n Keep " .. runwaySide)
         drawSpeedlimite()
     end
 
@@ -240,7 +248,6 @@ function script.drawUI()
 end
 
 function script.update(dt)
-    
     -- Exit if not online and not race
     local sim = ac.getSim()
     if sim.isOnlineRace and sim.raceSessionType == ac.SessionType.Race then
@@ -266,8 +273,8 @@ function script.update(dt)
                 debug("Crossed start line")
             end
 
-            -- If lap is 1 or more, switch to step 5 (end formation lap)
-            if focusedCarState.lapCount >= 1 then
+            -- If leader lap is 1 or more, switch to step 5 (end formation lap)
+            if leaderboard[1].lapCount >= 1 then
                 lapSteps = 5
                 debug("Step 5")
             end
@@ -280,6 +287,7 @@ function script.update(dt)
                     isFormationLap = false
                 end
             else
+                -- follow the leader position on track
                 local currentPositionM = leaderboard[1].splinePosition * trackLengthM
 
                 if currentPositionM <= markSide then
@@ -315,10 +323,12 @@ function script.update(dt)
 
             -- Even positions are on the right, odd positions are on the left
             --to have the opposite, do focusedCarState.racePosition % 2 == 1
-            if focusedCarState.racePosition % 2 == 0 then
-                sideStr = "right"
+            local evenSide = 0
+            if leaderSideStart == -1 then evenSide = 1 end
+            if focusedCarState.racePosition % 2 == evenSide then
+                runwaySide = "right"
             else
-                sideStr = "left"
+                runwaySide = "left"
             end
         end
     end
