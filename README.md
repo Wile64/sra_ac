@@ -37,6 +37,25 @@
 
 _* Ne fonctionne pas pour les autres voitures._
 
+## sra_radar
+**Application radar.**
+<ul>
+<p><img src="sra_radar.gif" /></p>
+<li>Portée du radar : 25 mètres</li>
+<li>Premier cercle : à 4 mètres du centre du radar</li>
+<li>Deuxieme cercle : à 7 mètres du centre du radar</li>
+<li>troisième cercle : à 10 mètres du centre du radar</li>
+<li>Echelle des voitures respectée</li>
+<li>Désactivé dans les stands</li>
+<li>Les voitures aux stands n'activent pas le radar</li>
+<li>Les voitures situées au-dessus ou en dessous (comme sur des ponts) n'activent pas le radar.</li>
+<li>Affichage de la position de course</li>
+<li>Sonar activé dans un rayon de 7 mètres</li>
+<li>Message sonore pour signaler les voitures dans les angles morts</li>
+<li>Redimensionnement de la fenêtre pour ajuster la taille du radar (fonction zoom)</li>
+<li>Clic droit sur la fenêtre pour "Pin Window" afin de la fixer à l'écran</li>
+<li>Options disponibles pour personnaliser les paramètres.</li>
+</ul>
 
 ## sra_damage
 <p><img src="damage.png" /></p>
