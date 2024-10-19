@@ -9,7 +9,7 @@
    <img src="sra.png" alt="Alt text">
 </p>
 
-## [Lien Discord SRA](https://discord.gg/sPDbxeY9)
+## [Lien Discord SRA](https://discord.gg/zGwTtpCqCF)
 
 ### Bienvenue dans mes applications Lua pour Assetto Corsa. 
 >Ce projet vise à fournir diverses applications Lua utiles pour améliorer l'expérience de jeu sur Assetto Corsa.

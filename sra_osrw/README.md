@@ -14,6 +14,5 @@ Un petit script rapide fait pour Zivan TV afin qu'il lance rapidement via des bo
 - START UNLAPPING PROCEDURE
 - END UNLAPPING PROCEDURE
 
-### [Lien Discord SRA](https://discord.gg/sPDbxeY9)
-### [Lien Discord FSW](https://discord.gg/BhnJUNjU)
+### [Lien Discord SRA](https://discord.gg/zGwTtpCqCF)
 
