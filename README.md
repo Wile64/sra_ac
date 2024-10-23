@@ -88,21 +88,30 @@ _*Fonctionne pour les autres voitures._
 _* Certaines infos ne fonctionne pas pour les autres voitures._
 </br>
 
-## sra_gap
+## sra_gap V1.0 refaite le 23/10/2024
 <p><img src="gap.png" /></p>
 
 **Affiche le gap de x pilotes devant et derrière.**
 
+**EN Qualif et en course**
 <ul>
 <li>Position</li>
 <li>Nom du pilote</li>
 <li>Meilleur tour</li>
 <li>Dernier tour</li>
-<li>Type de pneu</li>
 <li>Gap</li>
-<li>Dans les pits</li>
-<li>Options et zoom disponible</li>
 <li>Type de pneu</li>
+<li>Dans les pits</li>
+<li>Options</li>
+<ul>- Taille du zoom</ul>
+<ul>- Nombre de pilotes a afficher devant et derriere (1-5)</ul>
+<ul>- Affichage du premier</ul>
+<ul>- Affichage du meilleur temps</ul>
+<ul>- Affichage du dernier temps</ul>
+<ul>- Affichage des tours</ul>
+<ul>- Affichage du gap</ul>
+<ul>- Affichage du dernier temps</ul>
+<ul>- EN qualif, gap depuis le premier ou les précédents</ul>
 </ul>
 
 ## sra_hud
