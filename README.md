@@ -178,11 +178,26 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 **Petit outil pour changer de camera.**
 
 <ul>
+<li>Sélectionner un pilote</li>
 <li>Changer de vue facilement avec les controles de droite</li>
 <li>Aide des controles de la vue si disponible</li>
 <li>Bouton pour activer le changement de vue alétoire</li>
 <li>Changement du timer aléatoire de 2 a 60 secondes</li>
 <li>Information sur la voiture/pilote selectionné</li>
+<li>Une option pour téléporter automatiquement votre voiture dans les stands au début de la session</li>
+</ul>
+
+## sra_admin
+<p><img src="admin.png" /></p>
+
+**Petit outil pour faciliter les admins.**
+
+<ul>
+<li>Sauvegarder le MDP dans les paramètres et connectez vous en 1 clic</li>
+<li>Changer de climat</li>
+<li>Sélectionner un pilote</li>
+<li>Pour lui appliquer du ballast, une restriction, le kick ou autres</li>
+<li>Appliquer du ballast ou une restriction a tous les pilotes</li>
 </ul>
 
 ## sra_setup
