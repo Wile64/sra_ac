@@ -2,8 +2,6 @@
 -- Created by Wile64 on october 2023
 --
 
--- https://github.com/ac-custom-shaders-patch/acc-lua-sdk/blob/main/.definitions/ac_common.txt
-
 require('classes/carsra')
 require('views/chronohud')
 require('views/timehud')
@@ -12,6 +10,7 @@ require('views/poshud')
 require('views/sectorhud')
 require('views/weatherhud')
 require('views/racehud')
+require('views/speedhud')
 require('classes/settings')
 
 CAR = CarSRA()
@@ -82,8 +81,13 @@ local function tabPosition()
   end
 end
 
+local function tabLed()
+  SETTING.ledHUD.scale = ui.slider('##Scale', SETTING.ledHUD.scale, 1.0, 3.0, 'Scale: %1.1f')
+end
+
 local function tabGeneral()
   SETTING.scale = ui.slider('##Scale', SETTING.scale, 1.0, 3.0, 'Scale: %1.1f')
+  
   if ui.colorButton('##StyleColor', SETTING.styleColor, ui.ColorPickerFlags.AlphaBar + ui.ColorPickerFlags.PickerHueBar) then
     SETTING.styleColor = SETTING.styleColor
   end
@@ -104,6 +108,7 @@ function script.windowSetup(dt)
     ui.tabItem('Weather HUD', tabWeather)
     ui.tabItem('Race HUD', tabRace)
     ui.tabItem('Position HUD', tabPosition)
+    ui.tabItem('Led HUD', tabLed)
   end)
 
   ui.separator()

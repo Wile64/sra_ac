@@ -97,8 +97,8 @@ function script.posHUD(dt)
     --Flag
     if SETTING.positionHUD.showFlag then
         local FlagStr = {
+            'NONE',
             'GREEN',
-            'Start',
             'Yellow',
             'Slippery',
             'Pit Close',
@@ -116,23 +116,23 @@ function script.posHUD(dt)
             'Code60',
         }
         local FlagColor = {
-            { rgbm.colors.green,  rgbm.colors.white }, -- ac.FlagType.None
-            { rgbm.colors.aqua,   rgbm.colors.black }, -- ac.FlagType.Start
-            { rgbm.colors.yellow, rgbm.colors.black }, --ac.FlagType.Caution
-            { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.Slippery
-            { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.PitLaneClosed
-            { rgbm.colors.black,  rgbm.colors.white }, --ac.FlagType.Stop
-            { rgbm.colors.yellow, rgbm.colors.black }, --ac.FlagType.SlowVehicle
-            { rgbm.colors.red,    rgbm.colors.white }, --ac.FlagType.Ambulance
-            { rgbm.colors.red,    rgbm.colors.white }, --ac.FlagType.ReturnToPits
-            { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.MechanicalFailure
-            { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.Unsportsmanlike
-            { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.StopCancel
-            { rgbm.colors.blue,   rgbm.colors.white }, --ac.FlagType.FasterCar
-            { rgbm.colors.gray,   rgbm.colors.white }, --ac.FlagType.Finished
-            { rgbm.colors.white,  rgbm.colors.black }, --ac.FlagType.OneLapLeft
-            { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.SessionSuspended
-            { rgbm.colors.aqua,   rgbm.colors.black }, --ac.FlagType.Code60
+            { rgbm.colors.transparent,  rgbm.colors.white },  -- ac.FlagType.None
+            { rgbm.colors.green,  rgbm.colors.white },  -- ac.FlagType.Start
+            { rgbm.colors.yellow, rgbm.colors.black },  --ac.FlagType.Caution
+            { rgbm.colors.aqua,   rgbm.colors.black },  --ac.FlagType.Slippery
+            { rgbm.colors.aqua,   rgbm.colors.black },  --ac.FlagType.PitLaneClosed
+            { rgbm.colors.black,  rgbm.colors.white },  --ac.FlagType.Stop
+            { rgbm.colors.yellow, rgbm.colors.black },  --ac.FlagType.SlowVehicle
+            { rgbm.colors.red,    rgbm.colors.white },  --ac.FlagType.Ambulance
+            { rgbm.colors.red,    rgbm.colors.white },  --ac.FlagType.ReturnToPits
+            { rgbm.colors.aqua,   rgbm.colors.black },  --ac.FlagType.MechanicalFailure
+            { rgbm.colors.aqua,   rgbm.colors.black },  --ac.FlagType.Unsportsmanlike
+            { rgbm.colors.aqua,   rgbm.colors.black },  --ac.FlagType.StopCancel
+            { rgbm.colors.blue,   rgbm.colors.white },  --ac.FlagType.FasterCar
+            { rgbm.colors.gray,   rgbm.colors.white },  --ac.FlagType.Finished
+            { rgbm.colors.white,  rgbm.colors.black },  --ac.FlagType.OneLapLeft
+            { rgbm.colors.aqua,   rgbm.colors.black },  --ac.FlagType.SessionSuspended
+            { rgbm.colors.aqua,   rgbm.colors.black },  --ac.FlagType.Code60
 
         }
         local flag = session.raceFlagType + 1

@@ -121,16 +121,26 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <ul>
 <li>Race info</li>
 <li><img src="raceinfo.png" /></li>
-<li>Session</li>
-<li>Position</li>
+<li>Type de Session</li>
+<li>Position en course</li>
 <li>Nombre de tour</li>
 <li>Temps de session (online)</li>
 <li>Drapeau</li>
 </ul>
 <li>Heure locale et du serveur</li>
 <li><img src="time.png" /></li>
-<li>Affichage des temoins</li>
+<li>Affichage des temoins en mode transparent</li>
 <li><img src="leds.png" /></li>
+<ul>
+<li>DRS</li>
+<li>ABS</li>
+<li>TC</li>
+<li>Phares</li>
+<li>Limiteur de vitesse</li>
+<li>Clignotants (droit et gauche)</li>
+<li>Warning</li>
+<li>Option de zoom</li>
+</ul>
 <li>Meilleurs tours</li>
 <li><img src="times.png" /></li>
 <ul>
@@ -146,17 +156,17 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <ul>
 <li>Temps par sercteur</li>
 </ul>
-<li>Condition</li>
+<li>Condition climatique</li>
 <li><img src="weather.png" /></li>
 <ul>
 <li>Température ambiente</li>
 <li>Température de la piste</li>
-<li>Météo (icone) et vitesse vent </li>
+<li>Météo (icone) et vitesse du vent </li>
 </ul>
-<li>Race</li>
+<li>Condition de course (online et offline)</li>
 <li><img src="race.png" /></li>
 <ul>
-<li>Grip</li>
+<li>Taux de Grip</li>
 <li>Taux de carburant</li>
 <li>Taux de dégat</li>
 <li>Taux d'usure des pneus</li>

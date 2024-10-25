@@ -30,6 +30,9 @@ function Settings:initialize() -- constructor
         showSessionTimer = true,
         showFlag = true,
     }
+    self.ledHUD = {
+        scale = 1.0
+    }
     self.ini = nil
     self.fileINI = ac.getFolder(ac.FolderID.ACDocuments) .. '/apps/sra_hud.ini'
     self.scale = 1
@@ -41,9 +44,9 @@ end
 function Settings:loadList(table, name)
     for key, value in pairs(table) do
         if rgbm.isrgbm(value) then
-            value = rgbm.new(self.ini:get(name, key, value))
+            table[key] = rgbm.new(self.ini:get(name, key, value))
         else
-            value = self.ini:get(name, key, value)
+            table[key] = self.ini:get(name, key, value)
         end
     end
 end
@@ -58,6 +61,7 @@ function Settings:load()
         self:loadList(self.weatherHUD, "weatherHUD")
         self:loadList(self.raceHUD, "raceHUD")
         self:loadList(self.positionHUD, "positionHUD")
+        self:loadList(self.ledHUD, "ledHUD")
     end
 end
 
@@ -90,5 +94,6 @@ function Settings:save()
     self:saveList(self.weatherHUD, "weatherHUD")
     self:saveList(self.raceHUD, "raceHUD")
     self:saveList(self.positionHUD, "positionHUD")
+    self:saveList(self.ledHUD, "ledHUD")
     self.ini:save(self.fileINI)
 end
