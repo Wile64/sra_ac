@@ -37,21 +37,21 @@
 
 _* Ne fonctionne pas pour les autres voitures._
 
-## sra_radar
+## sra_radar v1.0
 **Application radar.**
 <ul>
 <p><img src="sra_radar.gif" /></p>
 <li>Portée du radar : 25 mètres</li>
 <li>Premier cercle : à 4 mètres du centre du radar</li>
 <li>Deuxieme cercle : à 7 mètres du centre du radar</li>
-<li>troisième cercle : à 10 mètres du centre du radar</li>
+<li>Troisième cercle : à 10 mètres du centre du radar</li>
 <li>Echelle des voitures respectée</li>
 <li>Désactivé dans les stands</li>
 <li>Les voitures aux stands n'activent pas le radar</li>
 <li>Les voitures situées au-dessus ou en dessous (comme sur des ponts) n'activent pas le radar.</li>
 <li>Affichage de la position de course</li>
 <li>Sonar activé dans un rayon de 7 mètres</li>
-<li>Message sonore pour signaler les voitures dans les angles morts</li>
+<li>Spotter pour signaler les voitures dans les angles morts (droit et gauche)</li>
 <li>Redimensionnement de la fenêtre pour ajuster la taille du radar (fonction zoom)</li>
 <li>Clic droit sur la fenêtre pour "Pin Window" afin de la fixer à l'écran</li>
 <li>Options disponibles pour personnaliser les paramètres.</li>
@@ -63,7 +63,7 @@ _* Ne fonctionne pas pour les autres voitures._
 **Application de statut des dégats.**
 <ul>
 <li>Dégat Moteur</li>
-<li> Dégat Boite</li>
+<li>Dégat Boite</li>
 <li>Dégat avant / arrière</li>
 <li>Dégat droit / gauche</li>
 <li>Dégat Plat de pneu</li>
@@ -79,7 +79,7 @@ _*Fonctionne pour les autres voitures._
 **Un petit dasboard style GT.**
 <ul>
 <li>Un max d'infos très utilie en course</li>
-<li>P2P ou DRS selon la voitur</li>
+<li>P2P ou DRS selon la voiture</li>
 <li>Turbo si dipsonible</li>
 <li>KERS et ERS si disponible</li>
 <li>Options et zoom disponible</li>
@@ -88,10 +88,12 @@ _*Fonctionne pour les autres voitures._
 _* Certaines infos ne fonctionne pas pour les autres voitures._
 </br>
 
-## sra_gap V1.0 refaite le 23/10/2024
+## sra_gap v1.0
 <p><img src="gap.png" /></p>
 
 **Affiche le gap de x pilotes devant et derrière.**
+
+**CSP 0.2.4 minimum.**
 
 **EN Qualif et en course**
 <ul>
@@ -103,15 +105,17 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Type de pneu</li>
 <li>Dans les pits</li>
 <li>Options</li>
-<ul>- Taille du zoom</ul>
-<ul>- Nombre de pilotes a afficher devant et derriere (1-5)</ul>
-<ul>- Affichage du premier</ul>
-<ul>- Affichage du meilleur temps</ul>
-<ul>- Affichage du dernier temps</ul>
-<ul>- Affichage des tours</ul>
-<ul>- Affichage du gap</ul>
-<ul>- Affichage du dernier temps</ul>
-<ul>- EN qualif, gap depuis le premier ou les précédents</ul>
+<ul>
+<li>Taille du zoom</li>
+<li>Nombre de pilotes a afficher devant et derriere (1-5)</li>
+<li>Affichage du premier</li>
+<li>Affichage du meilleur temps</li>
+<li>Affichage du dernier temps</li>
+<li>Affichage des tours</li>
+<li>Affichage du gap</li>
+<li>Affichage du dernier temps</li>
+<li>EN qualif, gap depuis le premier ou les précédents</li>
+</ul>
 </ul>
 
 ## sra_hud
@@ -155,6 +159,11 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li><img src="sectors.png" /></li>
 <ul>
 <li>Temps par sercteur</li>
+<ul>
+<li>Temps actuel</li>
+<li>Dernier temps</li>
+<li>Meilleur temps</li>
+</ul>
 </ul>
 <li>Condition climatique</li>
 <li><img src="weather.png" /></li>
