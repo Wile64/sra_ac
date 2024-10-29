@@ -83,11 +83,50 @@ end
 
 local function tabLed()
   SETTING.ledHUD.scale = ui.slider('##Scale', SETTING.ledHUD.scale, 1.0, 3.0, 'Scale: %1.1f')
+
+  if ui.checkbox('Show DRS', SETTING.ledHUD.showDRS) then
+    SETTING.ledHUD.showDRS = not SETTING.ledHUD.showDRS
+  end
+  if ui.checkbox('Show TC', SETTING.ledHUD.showTC) then
+    SETTING.ledHUD.showTC = not SETTING.ledHUD.showTC
+  end
+  if ui.checkbox('Show ABS', SETTING.ledHUD.showABS) then
+    SETTING.ledHUD.showABS = not SETTING.ledHUD.showABS
+  end
+  if ui.checkbox('Show Speed Limiter', SETTING.ledHUD.showSpeedLimiter) then
+    SETTING.ledHUD.showSpeedLimiter = not SETTING.ledHUD.showSpeedLimiter
+  end
+  if ui.checkbox('Show Light', SETTING.ledHUD.showLight) then
+    SETTING.ledHUD.showLight = not SETTING.ledHUD.showLight
+  end
+  if ui.checkbox('Show Flashing Light', SETTING.ledHUD.showFlashingLight) then
+    SETTING.ledHUD.showFlashingLight = not SETTING.ledHUD.showFlashingLight
+  end
+  if ui.checkbox('Show Hazard', SETTING.ledHUD.showHazard) then
+    SETTING.ledHUD.showHazard = not SETTING.ledHUD.showHazard
+  end
+  if ui.checkbox('Show Turning Light', SETTING.ledHUD.showTurningLight) then
+    SETTING.ledHUD.showTurningLight = not SETTING.ledHUD.showTurningLight
+  end
+end
+
+local function tabSector()
+  SETTING.sectorHUD.scale = ui.slider('##Scale', SETTING.sectorHUD.scale, 1.0, 3.0, 'Scale: %1.1f')
+
+  if ui.checkbox('Show current sector', SETTING.sectorHUD.showCurrent) then
+    SETTING.sectorHUD.showCurrent = not SETTING.sectorHUD.showCurrent
+  end
+  if ui.checkbox('Show last sector', SETTING.sectorHUD.showLast) then
+    SETTING.sectorHUD.showLast = not SETTING.sectorHUD.showLast
+  end
+  if ui.checkbox('Show best sector', SETTING.sectorHUD.showBest) then
+    SETTING.sectorHUD.showBest = not SETTING.sectorHUD.showBest
+  end
 end
 
 local function tabGeneral()
   SETTING.scale = ui.slider('##Scale', SETTING.scale, 1.0, 3.0, 'Scale: %1.1f')
-  
+
   if ui.colorButton('##StyleColor', SETTING.styleColor, ui.ColorPickerFlags.AlphaBar + ui.ColorPickerFlags.PickerHueBar) then
     SETTING.styleColor = SETTING.styleColor
   end
@@ -109,6 +148,7 @@ function script.windowSetup(dt)
     ui.tabItem('Race HUD', tabRace)
     ui.tabItem('Position HUD', tabPosition)
     ui.tabItem('Led HUD', tabLed)
+    ui.tabItem('Sector HUD', tabSector)
   end)
 
   ui.separator()
