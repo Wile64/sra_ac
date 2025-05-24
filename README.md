@@ -37,7 +37,7 @@
 
 _* Ne fonctionne pas pour les autres voitures._
 
-## sra_radar v1.0
+## sra_radar v1.1
 **Application radar.**
 <ul>
 <p><img src="sra_radar.gif" /></p>
@@ -88,35 +88,15 @@ _*Fonctionne pour les autres voitures._
 _* Certaines infos ne fonctionne pas pour les autres voitures._
 </br>
 
-## sra_gap v1.0
+## sra_gapview v1.0
 <p><img src="gap.png" /></p>
 
 **Affiche le gap de x pilotes devant et derrière.**
 
 **CSP 0.2.4 minimum.**
 
-**EN Qualif et en course**
-<ul>
-<li>Position</li>
-<li>Nom du pilote</li>
-<li>Meilleur tour</li>
-<li>Dernier tour</li>
-<li>Gap</li>
-<li>Type de pneu</li>
-<li>Dans les pits</li>
-<li>Options</li>
-<ul>
-<li>Taille du zoom</li>
-<li>Nombre de pilotes a afficher devant et derriere (1-5)</li>
-<li>Affichage du premier</li>
-<li>Affichage du meilleur temps</li>
-<li>Affichage du dernier temps</li>
-<li>Affichage des tours</li>
-<li>Affichage du gap</li>
-<li>Affichage du dernier temps</li>
-<li>EN qualif, gap depuis le premier ou les précédents</li>
-</ul>
-</ul>
+<p><img src="gapview_settings.png" /></p>
+
 
 ## sra_hud
 
