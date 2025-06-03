@@ -233,6 +233,43 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Pour l'autoformation</li>
 </ul>
 
+## sra_mirror
+
+**Petit miroir virtuel.**
+
+<ul>
+<li>Ajouter un miroir virtuel la ou vous voulez</li>
+<li>Redimentionnez le comme vous voulez</li>
+<li>Modifiez le gamma et la luminosité</li>
+
+</ul>
+
+## sra_pits
+<p><img src="sra_pit.png" /></p>
+
+**Calculé votre arrêt aux stands.**
+
+<ul>
+<li>La fenêtre s'ouvre automatiquement a l'entrée aux stands</li>
+<li>La fenêtre se ferme automatiquement a la sortie des stands</li>
+<li>Vous pouvez voir le temps pour changer les pneus</li>
+<li>Si vous avez des dégats, vous pouvez voir :</li>
+<ul>
+<li>Le temps de réparation du Body</li>
+<li>Le temps de réparation de la suspenssion</li>
+<li>Le temps de réparation du moteur</li>
+</ul>
+<li>En entrainement :</li>
+<ul>
+<li>Cliquez sur + ou - pour ajouter une quantité d'essence pour voir le temps d'arrêt</li>
+</ul>
+<li>En course :</li>
+<ul>
+<li>Une estimation à ajouter est calculé automatiquement pour finir la course</li>
+</ul>
+</ul>
+
+
 ## Comment Utiliser
 
 1. Cliquez sur le bouton vert "Code" en haut à droite de la page.

@@ -29,41 +29,77 @@ local trackLength         = ac.getSim().trackLengthM -- longueur du circuit (m)
 local N_POINTS            = math.floor(trackLength / POINT_SPACING)
 
 
-local themeFocused   = {
-  racePosition = { background = rgbm.colors.aqua, text = rgbm.colors.black },
-  text = { background = rgbm(0.6, 0.6, 0.6, 0.5), text = rgbm.colors.aqua },
-  pit = { background = rgbm.colors.white, text = rgbm.colors.black },
-  LapValid = { background = rgbm(0.6, 0.6, 0.6, 0.5), text = rgbm.colors.white },
-  notLapValid = { background = rgbm(0.6, 0.6, 0.6, 0.5), text = rgbm.colors.red },
+local palette = {
+  -- fonds
+  bg_standard    = rgbm(0.0, 0.0, 0.0, 0.5),
+  bg_selected    = rgbm(0.6, 0.6, 0.6, 0.5),
+  bg_selectedPos = rgbm.colors.aqua,
+  bg_leader      = rgbm.colors.lime,
+  bg_blueflag    = rgbm(0.0, 0.5, 1.0, 0.5),
+  bg_pit         = rgbm.colors.white,
+  bg_validLap    = rgbm(0.0, 0.0, 0.0, 0.5),
+  bg_invalidLap  = rgbm.colors.red,
+
+  -- textes
+  fg_standard    = rgbm.colors.white,
+  fg_selected    = rgbm.colors.aqua,
+  fg_selectedPos = rgbm.colors.black,
+  fg_leader      = rgbm.colors.lime,
+  fg_leaderPos   = rgbm.colors.black,
+  fg_blueflag    = rgbm.colors.white,
+  fg_pit         = rgbm.colors.black,
+  fg_validLap    = rgbm.colors.white,
+  fg_invalidLap  = rgbm.colors.red,
+  fg_aheadBlue   = rgbm(0, 0.6, 1, 1),
 }
-local themeStandard  = {
-  racePosition = { background = rgbm.colors.white, text = rgbm.colors.black },
-  text = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.white },
-  pit = { background = rgbm.colors.white, text = rgbm.colors.black },
-  LapValid = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.white },
-  notLapValid = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.red },
+
+local State   = { Standard = 1, Leader = 2, BlueFlag = 3, Focused = 4, AheadBlue = 5, LeaderFocused = 6, LeaderBlue = 7 }
+
+local themes  = {
+  [State.Standard] = {
+    position   = { bg = palette.bg_standard, fg = palette.fg_standard },
+    text       = { bg = palette.bg_standard, fg = palette.fg_standard },
+    pit        = { bg = palette.bg_pit, fg = palette.fg_pit },
+    lapInvalid = { bg = palette.bg_standard, fg = palette.fg_invalidLap },
+  },
+  [State.Leader] = {
+    position = { bg = palette.bg_leader, fg = palette.fg_leaderPos },
+    text     = { bg = palette.bg_standard, fg = palette.fg_leader },
+  },
+  [State.BlueFlag] = {
+    position   = { bg = palette.bg_blueflag, fg = palette.fg_blueflag },
+    text       = { bg = palette.bg_blueflag, fg = palette.fg_blueflag },
+    lapInvalid = { bg = palette.bg_blueflag, fg = palette.fg_invalidLap },
+  },
+  [State.AheadBlue] = {
+    text = { bg = palette.bg_standard, fg = palette.fg_aheadBlue },
+  },
+  [State.Focused] = {
+    position   = { bg = palette.bg_selectedPos, fg = palette.fg_selectedPos },
+    text       = { bg = palette.bg_selected, fg = palette.fg_selected },
+    lapInvalid = { bg = palette.bg_selected, fg = palette.fg_invalidLap },
+  },
+  [State.LeaderFocused] = {
+    position   = { bg = palette.bg_leader, fg = palette.fg_leaderPos },
+    text       = { bg = palette.bg_selected, fg = palette.fg_leader },
+    lapInvalid = { bg = palette.bg_selected, fg = palette.fg_invalidLap },
+  },
+  [State.LeaderBlue] = {
+    position   = { bg = palette.bg_leader, fg = palette.fg_leaderPos },
+    text       = { bg = palette.bg_blueflag, fg = palette.fg_leader },
+    lapInvalid = { bg = palette.bg_blueflag, fg = palette.fg_invalidLap },
+  },
 }
-local themeLeader    = {
-  racePosition = { background = rgbm.colors.lime, text = rgbm.colors.black },
-  text = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.lime },
-  pit = { background = rgbm.colors.white, text = rgbm.colors.black },
-  LapValid = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.white },
-  notLapValid = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.red },
-}
-local themeBlueFlag  = {
-  racePosition = { background = rgbm.colors.cyan, text = rgbm.colors.black },
-  text = { background = rgbm(0.0, 0.5, 1, 0.5), text = rgbm.colors.white },
-  pit = { background = rgbm.colors.white, text = rgbm.colors.black },
-  LapValid = { background = rgbm(0.0, 0.5, 1, 0.5), text = rgbm.colors.white },
-  notLapValid = { background = rgbm(0.0, 0.5, 1, 0.5), text = rgbm.colors.red },
-}
-local themeAheadBlue = {
-  racePosition = { background = rgbm.colors.white, text = rgbm.colors.blue },
-  text = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.cyan },
-  pit = { background = rgbm.colors.white, text = rgbm.colors.black },
-  LapValid = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.cyan },
-  notLapValid = { background = rgbm(0.0, 0.0, 0.0, 0.5), text = rgbm.colors.red },
-}
+
+--- Récupère bg et fg en une fois pour un State et un composant donné.
+-- @param state integer   une des clés de State (Standard, Leader, etc.)
+-- @param comp  string    "position" | "text" | "pit" | "lapValid" | "lapInvalid"
+-- @return bg, fg         deux tables rgbm
+-- plutôt que return c.fg, c.bg
+local function getColors(state, comp)
+  local c = themes[state][comp] or themes[State.Standard][comp]
+  return c.fg, c.bg
+end
 
 if ac.onSessionStart then
   ac.onSessionStart(function()
@@ -152,27 +188,30 @@ function script.update(dt)
     -- collecte distance parcourue (m) et vitesse (m/s)
     for i = 0, nCars - 1 do
       local car = ac.getCar(i)
-      if car and car.isConnected and not car.isRetired then
-        standings[#standings + 1] = {
-          idx            = i,
-          name           = nickName(ac.getDriverName(i)), -- récupère le nom du pilote
-          nationCode     = ac.getDriverNationCode(i),
-          splinePosition = car.splinePosition,
-          focused        = car.focused,
-          speed          = car.speedMs,
-          gap            = 0,
-          position       = car.racePosition,
-          bestLap        = car.bestLapTimeMs,
-          isLastLapValid = car.isLastLapValid,
-          lastLap        = car.previousLapTimeMs,
-          tyre           = ac.getTyresName(i),
-          isInPit        = car.isInPitlane,
-          number         = ac.getDriverNumber(i),
-          carName        = ac.getCarID(i),
-          lapCount       = car.lapCount,
-        }
+      if car then
+        if car.isConnected and not car.isRetired then
+          standings[#standings + 1] = {
+            idx            = i,
+            name           = nickName(ac.getDriverName(i)), -- récupère le nom du pilote
+            nationCode     = ac.getDriverNationCode(i),
+            splinePosition = car.splinePosition,
+            focused        = car.focused,
+            speed          = car.speedMs,
+            gap            = 0,
+            position       = car.racePosition,
+            bestLap        = car.bestLapTimeMs,
+            isLastLapValid = car.isLastLapValid,
+            lastLap        = car.previousLapTimeMs,
+            tyre           = ac.getTyresName(i),
+            isInPit        = car.isInPitlane,
+            number         = ac.getDriverNumber(i),
+            carName        = ac.getCarID(i),
+            lapCount       = car.lapCount,
+          }
+        end
       end
     end
+
 
     -- tri descendant par distance
     table.sort(standings, function(a, b) return a.splinePosition > b.splinePosition end)
@@ -211,22 +250,46 @@ local function writeText(text, lenght, colorText, colorBack, horizontalAligment)
     colorText)
 end
 
-local function drawPlayerLine(player, ahead)
-  local theme = themeStandard
+local function getState(player, ahead)
+  -- Leader & Focused ?
+  if player.position == 1 and player.focused then
+    return State.LeaderFocused
+  end
 
+  -- LeaderBlue : le leader (position==1), non-focus, mais physiquement derrière toi
+  if player.position == 1 and not player.focused and not ahead then
+    return State.LeaderBlue
+  end
+
+  -- Simple Leader ?
   if player.position == 1 then
-    theme = themeLeader
-  end
-  if player.focused then
-    theme = themeFocused
-  elseif not ahead and player.position < standings[focusedIndex].position then
-    theme = themeBlueFlag
-  elseif ahead and player.position > standings[focusedIndex].position then
-    theme = themeAheadBlue
+    return State.Leader
   end
 
-  writeText(string.format("%.2d", player.position), AppConfig.scale * 1.3, theme.racePosition.text, theme.racePosition
-    .background)
+  --  Focused (non-leader) ?
+  if player.focused then
+    return State.Focused
+  end
+  if standings[focusedIndex] then
+    -- BlueFlag (une voiture derrière toi mais non-focused) ?
+    if not ahead and player.position < standings[focusedIndex].position then
+      return State.BlueFlag
+    end
+
+    -- AheadBlue (une voiture devant toi mais non-focused) ?
+    if ahead and player.position > standings[focusedIndex].position then
+      return State.AheadBlue
+    end
+  end
+  --  Rien d’autre ⇒ Standard
+  return State.Standard
+end
+
+local function drawPlayerLine(player, ahead)
+  -- par défaut
+  local state = getState(player, ahead)
+
+  writeText(string.format("%.2d", player.position), AppConfig.scale * 1.3, getColors(state, "position"))
 
   if AppConfig.showBadge then
     ui.sameLine()
@@ -239,17 +302,18 @@ local function drawPlayerLine(player, ahead)
 
   if AppConfig.showNumber then
     ui.sameLine()
-    writeText(string.format("%d", player.number), AppConfig.scale * 1.7, theme.text.text, theme.text.background)
+    writeText(string.format("%d", player.number), AppConfig.scale * 1.7, getColors(state, "text"))
   end
   ui.sameLine()
-  writeText(player.name, AppConfig.scale * 10, theme.text.text, theme.text.background, ui.Alignment.Start)
+  local fg, bg = getColors(state, "text")
+  writeText(player.name, AppConfig.scale * 10, fg, bg, ui.Alignment.Start)
   if AppConfig.showTyre then
     ui.sameLine()
-    writeText(player.tyre, AppConfig.scale * 1.7, theme.text.text, theme.text.background)
+    writeText(player.tyre, AppConfig.scale * 1.7, getColors(state, "text"))
   end
   ui.sameLine()
   if player.focused then
-    writeText("", AppConfig.scale * 4, theme.text.text, theme.text.background)
+    writeText("", AppConfig.scale * 4, getColors(state, "text"))
   else
     if not player.isInPit then
       if ahead then
@@ -259,34 +323,31 @@ local function drawPlayerLine(player, ahead)
       end
     else
       player.gap = 0
-      ac.debug('pit')
     end
-
-    writeText(string.format("%.2fs", player.gap), AppConfig.scale * 4, theme.text.text, theme.text.background,
-      ui.Alignment.End)
+    fg, bg = getColors(state, "text")
+    writeText(string.format("%.2fs", player.gap), AppConfig.scale * 4, fg, bg, ui.Alignment.End)
   end
 
   if AppConfig.showBestLap then
     ui.sameLine()
-    writeText(ac.lapTimeToString(player.bestLap), AppConfig.scale * 4, theme.text.text, theme.text.background,
-      ui.Alignment.End)
+    fg, bg = getColors(state, "text")
+    writeText(ac.lapTimeToString(player.bestLap), AppConfig.scale * 4, fg, bg, ui.Alignment.End)
   end
   if AppConfig.showLastLap then
     ui.sameLine()
     if player.isLastLapValid then
-      writeText(ac.lapTimeToString(player.lastLap), AppConfig.scale * 4, theme.LapValid.text, theme.LapValid.background,
-        ui.Alignment.End)
+      fg, bg = getColors(state, "text")
+      writeText(ac.lapTimeToString(player.lastLap), AppConfig.scale * 4, fg, bg, ui.Alignment.End)
     else
-      writeText(ac.lapTimeToString(player.lastLap), AppConfig.scale * 4, theme.notLapValid.text,
-        theme.notLapValid.background, ui.Alignment.End)
+      fg, bg = getColors(state, "lapInvalid")
+      writeText(ac.lapTimeToString(player.lastLap), AppConfig.scale * 4, fg, bg, ui.Alignment.End)
     end
   end
   if player.isInPit then
     ui.sameLine()
-    writeText("P", AppConfig.scale, theme.pit.text, theme.pit.background)
+    writeText("P", AppConfig.scale, getColors(state, "text"))
   end
 end
-
 
 function script.windowMain(dt)
   if not appVisible then return end
@@ -302,10 +363,19 @@ function script.windowMain(dt)
       drawPlayerLine(standings[idx], isAhead)
     end
   end
+  if n == 1 then
+    drawPlayerLine(standings[focusedIndex], false)
+  elseif n <= 3 then
+    drawRange(-n, n)
+  else
+    local ahead = math.min(AppConfig.showAhead, n)
+    local behind = math.min(AppConfig.showBehind, n)
+    drawRange(-ahead, ahead, true)
+    drawPlayerLine(standings[focusedIndex], false)
+    drawRange(1, behind, false)
+  end
 
-  drawRange(-AppConfig.showAhead, AppConfig.showAhead, true)
-  drawPlayerLine(standings[focusedIndex], false)
-  drawRange(1, AppConfig.showBehind, false)
+
 
   ui.popStyleVar()
   ui.popDWriteFont()
