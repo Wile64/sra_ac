@@ -57,10 +57,12 @@ _* Ne fonctionne pas pour les autres voitures._
 <li>Options disponibles pour personnaliser les paramètres.</li>
 </ul>
 
-## sra_damage
+## sra_damage v1.1
 <p><img src="damage.png" /></p>
 
 **Application de statut des dégats.**
+
+Ajout de l'estimation du temps de réparation
 <ul>
 <li>Dégat Moteur</li>
 <li>Dégat Boite</li>
@@ -68,6 +70,9 @@ _* Ne fonctionne pas pour les autres voitures._
 <li>Dégat droit / gauche</li>
 <li>Dégat Plat de pneu</li>
 <li>Dégat Suspension</li>
+<li>Réparation Suspension</li>
+<li>Réparation Moteur</li>
+<li>Réparation Body</li>
 <li>Options et zoom disponible</li>
 </ul>
 
