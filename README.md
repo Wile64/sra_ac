@@ -239,13 +239,16 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Pour l'autoformation</li>
 </ul>
 
-## sra_mirror
+## sra_mirror v1.0
+<p><img src="mirror.png" /></p>
+<p><img src="setting_mirror.png" /></p>
 
 **Petit miroir virtuel.**
 
 <ul>
 <li>Ajouter un miroir virtuel la ou vous voulez</li>
 <li>Redimentionnez le comme vous voulez</li>
+<li>Un clic molette ouvre la fenêtre des réglages des mirroirs</li>
 <li>Modifiez le gamma et la luminosité</li>
 
 </ul>

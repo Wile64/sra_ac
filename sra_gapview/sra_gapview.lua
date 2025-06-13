@@ -375,8 +375,6 @@ function script.windowMain(dt)
     drawRange(1, behind, false)
   end
 
-
-
   ui.popStyleVar()
   ui.popDWriteFont()
 end
