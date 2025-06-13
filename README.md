@@ -78,8 +78,9 @@ Ajout de l'estimation du temps de réparation
 
 _*Fonctionne pour les autres voitures._
 
-## sra_minidash
+## sra_minidash v1.3
 <p><img src="minidash.png" /></p>
+<p><img src="Setting_dash.png" /></p>
 
 **Un petit dasboard style GT.**
 <ul>
