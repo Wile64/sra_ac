@@ -2,111 +2,420 @@
 -- Created by Wile64 on october 2023
 --
 
+VERSION = 1.5
 
-require('classes/settings')
-require('classes/carsra')
-VERSION = 1.302
-DEBUG = false
+local function loadTyreInfo(self)
+  local tyreini = ac.INIConfig.carData(0, 'tyres.ini')
+  local front = "FRONT"
+  local rear = "REAR"
+  if self.carState.compoundIndex > 0 then
+    front = front .. "_" .. tostring(self.carState.compoundIndex)
+    rear = rear .. "_" .. tostring(self.carState.compoundIndex)
+  end
+  local suffix = self.carState.compoundIndex > 0 and ('_' .. tostring(self.carState.compoundIndex)) or ''
 
-local carInfo = CarSRA()
-local config = Settings()
+  self.frontWearCurve = tyreini:tryGetLut('FRONT' .. suffix, 'WEAR_CURVE') or tyreini:tryGetLut('FRONT', 'WEAR_CURVE')
+  self.rearWearCurve = tyreini:tryGetLut('REAR' .. suffix, 'WEAR_CURVE') or tyreini:tryGetLut('REAR', 'WEAR_CURVE')
+  self.frontThermalCurve = tyreini:tryGetLut('THERMAL_FRONT' .. suffix, 'PERFORMANCE_CURVE')
+      or tyreini:tryGetLut('THERMAL_FRONT', 'PERFORMANCE_CURVE')
+  self.rearThermalCurve = tyreini:tryGetLut('THERMAL_REAR' .. suffix, 'PERFORMANCE_CURVE')
+      or tyreini:tryGetLut('THERMAL_REAR', 'PERFORMANCE_CURVE')
+  self.surfaceData.front.available =
+      tyreini:get('THERMAL_FRONT' .. suffix, 'GRAIN_GAIN', 0) > 0
+      or tyreini:get('THERMAL_FRONT' .. suffix, 'BLISTER_GAIN', 0) > 0
+      or tyreini:get('THERMAL_FRONT', 'GRAIN_GAIN', 0) > 0
+      or tyreini:get('THERMAL_FRONT', 'BLISTER_GAIN', 0) > 0
 
-local isShowGripInfo = false
+  self.surfaceData.rear.available =
+      tyreini:get('THERMAL_REAR' .. suffix, 'GRAIN_GAIN', 0) > 0
+      or tyreini:get('THERMAL_REAR' .. suffix, 'BLISTER_GAIN', 0) > 0
+      or tyreini:get('THERMAL_REAR', 'GRAIN_GAIN', 0) > 0
+      or tyreini:get('THERMAL_REAR', 'BLISTER_GAIN', 0) > 0
 
-local gripInfos = {
+  self.idealFrontPressure = tyreini:get('FRONT' .. suffix, 'PRESSURE_IDEAL', 0) or
+      tyreini:get('FRONT', 'PRESSURE_IDEAL', 0)
+  self.idealRearPressure = tyreini:get('REAR' .. suffix, 'PRESSURE_IDEAL', 0) or tyreini:get('REAR', 'PRESSURE_IDEAL', 0)
+
+  self.minThermal = 0
+  self.maxThermal = 0
+  if self.frontThermalCurve ~= nil then
+    for i = 0, #self.frontThermalCurve - 1 do
+      if self.frontThermalCurve:getPointOutput(i) > 0.99 then
+        local input = self.frontThermalCurve:getPointInput(i)
+        if self.maxThermal < input then
+          self.maxThermal = input
+        end
+        if self.minThermal == 0 then
+          self.minThermal = input
+        end
+      end
+    end
+  else
+    self.minThermal = 80
+    self.maxThermal = self:getTyreFL().tyreOptimumTemperature
+  end
+end
+
+local function loadDiscInfo(self)
+  local brakeini = ac.INIConfig.carData(0, 'brakes.ini')
+
+  local frontCurve = brakeini:tryGetLut("TEMPS_FRONT", "PERF_CURVE")
+  if frontCurve ~= nil then
+    self.isDiscLoaded = true
+    self.isDiscAvailable = true
+
+    local min, max = frontCurve:bounds()
+    self.discData.minFrontTemp = min.x
+    self.discData.maxFrontTemp = max.x
+    for i = 0, #frontCurve - 1 do
+      if frontCurve:getPointOutput(i) == 1 then
+        local input = frontCurve:getPointInput(i)
+        if self.discData.idealMaxFrontTemp < input then
+          self.discData.idealMaxFrontTemp = input
+        end
+        if self.discData.idealMinFrontTemp == 0 then
+          self.discData.idealMinFrontTemp = input
+        end
+      end
+    end
+  else
+    self.isDiscLoaded = false
+    self.isDiscAvailable = false
+    return
+  end
+
+  local rearCurve = brakeini:tryGetLut("TEMPS_REAR", "PERF_CURVE")
+  if rearCurve ~= nil then
+    self.isDiscLoaded = true
+    self.isDiscAvailable = true
+
+    local min, max = rearCurve:bounds()
+    self.discData.minRearTemp = min.x
+    self.discData.maxRearTemp = max.x
+    for i = 0, #rearCurve - 1 do
+      if rearCurve:getPointOutput(i) == 1 then
+        local input = rearCurve:getPointInput(i)
+        if self.discData.idealMaxRearTemp < input then
+          self.discData.idealMaxRearTemp = input
+        end
+        if self.discData.idealMinRearTemp == 0 then
+          self.discData.idealMinRearTemp = input
+        end
+      end
+    end
+  else
+    self.isDiscLoaded = false
+    self.isDiscAvailable = false
+    return
+  end
+end
+
+local carData = {
+  carState = nil,
+  idealFrontPressure = 0,
+  idealRearPressure = 0,
+  carID = 0,
+  currentCompoundIndex = -1,
+  frontWearCurve = nil,
+  rearWearCurve = nil,
+  frontThermalCurve = nil,
+  rearThermalCurve = nil,
+  minThermal = 0,
+  maxThermal = 0,
+  isDiscLoaded = false,
+  isDiscAvailable = true,
+  isDiscLiveAvailable = false,
+  discData = {
+    minFrontTemp = 0,
+    maxFrontTemp = 0,
+    idealMinFrontTemp = 0,
+    idealMaxFrontTemp = 0,
+    idealMaxFrontMaxEff = 0,
+    minRearTemp = 0,
+    maxRearTemp = 0,
+    idealMinRearTemp = 0,
+    idealMaxRearTemp = 0,
+    idealMaxRearMaxEff = 0,
+  },
+  discLiveData = {
+    mode = 'unknown',
+    timer = 0,
+    discMoved = false,
+    brakeMoved = false,
+    lastDisc = { [0] = nil, [1] = nil, [2] = nil, [3] = nil },
+    lastBrake = { [0] = nil, [1] = nil, [2] = nil, [3] = nil },
+  },
+  surfaceData = {
+    front = {
+      available = false,
+    },
+    rear = {
+      available = false,
+    },
+  }
+}
+
+function carData:setCarID(id)
+  if self.carID ~= id then
+    self.carID = id
+  end
+end
+
+function carData:getTyreFL()
+  return self.carState.wheels[0]
+end
+
+function carData:getTyreFR()
+  return self.carState.wheels[1]
+end
+
+function carData:getTyreRL()
+  return self.carState.wheels[2]
+end
+
+function carData:getTyreRR()
+  return self.carState.wheels[3]
+end
+
+function carData:safeDiscTemperature(tyre)
+  local ok, value = pcall(function() return tyre.discTemperature end)
+  if ok then return value end
+  return nil
+end
+
+function carData:safeBrakeTemperature(tyre)
+  local ok, value = pcall(function() return tyre.brakeTemperature end)
+  if ok then return value end
+  return nil
+end
+
+function carData:updateDiscLiveData(dt)
+  if not self.carState or not self.isDiscLoaded then
+    return
+  end
+
+  self.discLiveData.timer = self.discLiveData.timer + dt
+  for wheelID = 0, 3 do
+    local wheel = self.carState.wheels[wheelID]
+    local discTemp = wheel and self:safeDiscTemperature(wheel) or nil
+    local brakeTemp = wheel and self:safeBrakeTemperature(wheel) or nil
+
+    if discTemp ~= nil and self.discLiveData.lastDisc[wheelID] ~= nil and
+        math.abs(discTemp - self.discLiveData.lastDisc[wheelID]) > 0.05 then
+      self.discLiveData.discMoved = true
+    end
+    if brakeTemp ~= nil and self.discLiveData.lastBrake[wheelID] ~= nil and
+        math.abs(brakeTemp - self.discLiveData.lastBrake[wheelID]) > 0.05 then
+      self.discLiveData.brakeMoved = true
+    end
+
+    self.discLiveData.lastDisc[wheelID] = discTemp
+    self.discLiveData.lastBrake[wheelID] = brakeTemp
+  end
+
+  if self.discLiveData.discMoved then
+    self.discLiveData.mode = 'disc'
+    self.isDiscLiveAvailable = true
+  elseif self.discLiveData.brakeMoved then
+    self.discLiveData.mode = 'brake'
+    self.isDiscLiveAvailable = true
+  elseif self.discLiveData.timer > 2.5 then
+    self.discLiveData.mode = 'none'
+    self.isDiscLiveAvailable = false
+  end
+end
+
+function carData:getDiscTemp(tyre, tyreID)
+  if self.discLiveData.mode == 'disc' then
+    return self:safeDiscTemperature(tyre)
+  elseif self.discLiveData.mode == 'brake' then
+    return self:safeBrakeTemperature(tyre)
+  elseif tyreID ~= nil and self.discLiveData.lastDisc[tyreID] ~= nil then
+    return self.discLiveData.lastDisc[tyreID]
+  else
+    return self:safeDiscTemperature(tyre)
+  end
+end
+
+function carData:update(dt)
+  local carstate = ac.getCar(self.carID)
+  if carstate ~= nil then
+    self.carState = carstate
+    if self.currentCompoundIndex ~= self.carState.compoundIndex then
+      loadTyreInfo(self)
+      self.currentCompoundIndex = self.carState.compoundIndex
+    end
+    if self.isDiscLoaded == false and self.isDiscAvailable then
+      loadDiscInfo(self)
+    end
+    if self.isDiscLoaded then
+      self:updateDiscLiveData(dt)
+    end
+  end
+end
+
+local isAppVisible     = true
+local isShowGripInfo   = false
+
+local settings         = ac.storage {
+  Scale = 1,
+  showOptimal = true,
+  showTyreName = true,
+  showGrain = true,
+  showBlister = true,
+  showFlatSpot = true,
+  showDisc = true,
+  showCamberRotation = true,
+  showWearGrip = true,
+}
+
+local gripInfos        = {
   frontLoaded = false,
   frontHigh = 0,
   frontMedium = 0,
   frontLow = 0,
   rearLoaded = false,
-  RearHigh = 0,
-  RearMedium = 0,
-  RearLow = 0,
+  rearHigh = 0,
+  rearMedium = 0,
+  rearLow = 0,
 }
 
-local images = {
+local images           = {
   brakeDiscLeft = "/images/BrakeDiscleft.png",
   brakeDiscRight = "/images/BrakeDiscright.png",
-  slip = "/images/slip.png",
-  core = "/images/core.png"
+  slip = "/images/slip.png"
 }
 
-local tyrewheelLocks = {}
-table.insert(tyrewheelLocks, 0, { wheelLock = false, flatSpotValue = 0 })
-table.insert(tyrewheelLocks, 1, { wheelLock = false, flatSpotValue = 0 })
-table.insert(tyrewheelLocks, 2, { wheelLock = false, flatSpotValue = 0 })
-table.insert(tyrewheelLocks, 3, { wheelLock = false, flatSpotValue = 0 })
+local gripCache        = {
+  valid = false,
+  compoundIndex = -1,
+  frontWearCurve = nil,
+  rearWearCurve = nil,
+  tyreConsumptionRate = -1,
+  trackLengthKm = -1,
+}
 
-local function progressBarV(progress, rectSize, color)
-  progress = math.min(math.max(progress, 0), 1)
+local tyrewheelLocks   = {
+  [0] = { wheelLock = false, flatSpotValue = 0 },
+  [1] = { wheelLock = false, flatSpotValue = 0 },
+  [2] = { wheelLock = false, flatSpotValue = 0 },
+  [3] = { wheelLock = false, flatSpotValue = 0 },
+}
+local FLATSPOT_EPSILON = 1e-5
+local PANEL_BACKGROUND = rgbm(0.12, 0.12, 0.12, 0.9)
+local TEXT_COLOR       = rgbm.colors.white
 
-  local startPosition = ui.getCursor()
-  local progressBarFilledSize = vec2(rectSize.x, rectSize.y * progress)
+local function drawVerticalProgressBar(progress, size, color)
+  local clampedProgress = math.min(math.max(progress, 0), 1)
 
-  ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.gray)
-  startPosition.y = startPosition.y + (rectSize.y - progressBarFilledSize.y)
-  ui.drawRectFilled(startPosition, startPosition + progressBarFilledSize, color)
-  ui.dummy(rectSize + 1 * config.Scale)
+  local pos             = ui.getCursor()
+  local fillTop         = pos.y + size.y * (1 - clampedProgress)
+  if clampedProgress > 0 then
+    ui.drawRectFilled(vec2(pos.x, fillTop), pos + size, color, 3)
+  end
+  ui.drawRect(pos, pos + size, rgbm.colors.gray, 3)
+  ui.dummy(size)
 end
 
-local function WearProgress(progress, tyreVirtualKM, rectSize, color, front)
-  progress = math.min(math.max(progress, 0), 1)
-
-  local startPosition = ui.getCursor()
-  local progressBarFilledSize = vec2(rectSize.x, rectSize.y * progress)
-
-  if front then
-    if carInfo.frontWearCurve ~= nil then
-      if carInfo.frontWearCurve:get(tyreVirtualKM) > 99.5 then
-        color = rgbm.colors.green
-      elseif carInfo.frontWearCurve:get(tyreVirtualKM) > 98 then
-        color = rgbm.colors.yellow
-      else
-        color = rgbm.colors.red
-      end
-    end
-  else
-    if carInfo.rearWearCurve ~= nil then
-      if carInfo.rearWearCurve:get(tyreVirtualKM) > 99.5 then
-        color = rgbm.colors.green
-      elseif carInfo.rearWearCurve:get(tyreVirtualKM) > 98 then
-        color = rgbm.colors.yellow
-      else
-        color = rgbm.colors.red
-      end
-    end
+local function drawTrackedVerticalBar(progress, barSize, fillColor, bgColor, label)
+  ui.beginGroup()
+  local pos = ui.getCursor()
+  local labelHeight = math.min(10 * settings.Scale, barSize.y * 0.22)
+  ui.drawRectFilled(pos, pos + barSize, bgColor, 3)
+  local clampedProgress = math.min(math.max(progress or 0, 0), 1)
+  if clampedProgress > 0 then
+    local fillTop = pos.y + barSize.y * (1 - clampedProgress)
+    ui.drawRectFilled(vec2(pos.x, fillTop), pos + barSize, fillColor, 3)
   end
-  ui.drawRect(startPosition, startPosition + rectSize, rgbm.colors.gray)
-  startPosition.y = startPosition.y + (rectSize.y - progressBarFilledSize.y)
-  ui.drawRectFilled(startPosition, startPosition + progressBarFilledSize, color)
-  ui.dummy(rectSize + 1 * config.Scale)
+  ui.drawRect(pos, pos + barSize, rgbm.colors.gray, 3)
+  ui.dummy(barSize)
+
+  local labelPos = ui.getCursor()
+  local labelSize = vec2(barSize.x, labelHeight)
+  ui.drawRectFilled(labelPos, labelPos + labelSize, bgColor, 3)
+  ui.dwriteDrawTextClipped(label or "", 7 * settings.Scale, labelPos, labelPos + labelSize,
+    ui.Alignment.Center, ui.Alignment.Center, false, TEXT_COLOR)
+  ui.dummy(labelSize)
+  ui.endGroup()
 end
 
-local function toeIn(value, rectSize, color)
-  local middleRect = vec2(rectSize.x / 2, 0)
-  local minValue = -20
-  local maxValue = 20
-
-  value = math.min(maxValue, math.max(minValue, value))
-
-  local normalizedValue = value / maxValue
-  local barPosition = ui.getCursor()
-
-  ui.drawRect(barPosition, barPosition + rectSize, rgbm.colors.gray)
-  if value > 0 then
-    ui.drawRectFilled(barPosition + middleRect, barPosition + middleRect +
-      vec2(middleRect.x * normalizedValue, rectSize.y), color)
-  else
-    ui.drawRectFilled(barPosition + (middleRect + vec2(middleRect.x * normalizedValue, 0)),
-      barPosition + vec2(middleRect.x, rectSize.y), color)
+local function drawTyreTooltip(text)
+  if ui.itemHovered() then
+    ui.tooltip(function()
+      ui.pushFont(ui.Font.Monospace)
+      ui.text(text)
+      ui.popFont()
+    end)
   end
-  ui.dwriteTextAligned(string.format("%.2f", value), 8 * config.Scale, ui.Alignment.Start,
-    ui.Alignment.Center, rectSize, false, rgbm.colors.white)
+end
+
+local function wearColorFor(virtualKM, isFront)
+  local lut = isFront and carData.frontWearCurve or carData.rearWearCurve
+  if not lut then return rgbm.colors.green end
+  local g = lut:get(virtualKM)
+  if g >= 98 then
+    return rgbm.colors.green
+  elseif g > 96 then
+    return rgbm.colors.yellow
+  else
+    return rgbm.colors.red
+  end
+end
+
+
+local function computeGripRanges(lut, tyreConsumptionRate)
+  local high, medium, low = 0, 0, 0
+  if lut == nil then
+    return high, medium, low
+  end
+  for i = 0, #lut - 1 do
+    local grip = lut:getPointOutput(i)
+    local km = 10 * lut:getPointInput(i) / tyreConsumptionRate
+    if grip > 98 then
+      high = km
+    elseif grip > 96 then
+      medium = km
+    else
+      low = km
+    end
+  end
+  return high, medium, low
+end
+
+local function clamp(v, a, b)
+  if v < a then return a end
+  if v > b then return b end
+  return v
+end
+
+local function getSafeCamber(tyre)
+  local ok, camber = pcall(function()
+    return tyre.camber
+  end)
+  if not ok or type(camber) ~= 'number' then
+    return 0
+  end
+  return clamp(camber, -4, 4)
+end
+
+local function curveToFactor(v)
+  if v == nil then return 1 end
+  if v > 1.5 then return clamp(v / 100, 0, 1) end
+  return clamp(v, 0, 1)
+end
+
+local function computeTyreGripPercent(tyre, isFront)
+  local wearCurve = isFront and carData.frontWearCurve or carData.rearWearCurve
+  local thermalCurve = isFront and carData.frontThermalCurve or carData.rearThermalCurve
+  local wearF = wearCurve and curveToFactor(wearCurve:get(tyre.tyreVirtualKM or 0))
+      or clamp(1 - (tyre.tyreWear or 0), 0, 1)
+  local thermalF = thermalCurve and curveToFactor(thermalCurve:get(tyre.tyreCoreTemperature or 0)) or 1
+  return clamp(wearF * thermalF * 100, 0, 120)
 end
 
 local function getTyreColor(tyreTemp)
-  local minValue = carInfo.minThermal
-  local maxValue = carInfo.maxThermal
+  local minValue = carData.minThermal
+  local maxValue = carData.maxThermal
   local redComponent = 0
   local greenComponent = 0
   local blueComponent = 0
@@ -129,43 +438,47 @@ local function getTyreColor(tyreTemp)
   else
     greenComponent = mappedProgress
   end
-  return rgbm(redComponent, greenComponent, blueComponent, 1)
+  return rgbm(redComponent, greenComponent, blueComponent, 0.8)
 end
 
-
 local function getDiscColor(DiscTemp, front)
+  if not carData.isDiscLiveAvailable then
+    return rgbm(0.65, 0.65, 0.65, 1)
+  end
   local redComponent   = 0
   local greenComponent = 0
   local blueComponent  = 0
-  local idealminValue  = 0
-  local idealmaxValue  = 0
+  local idealMinValue  = 0
+  local idealMaxValue  = 0
   local minValue       = 0
   local maxValue       = 0
   if front then
-    idealminValue = carInfo.discData.idealMinFrontTemp
-    minValue = carInfo.discData.minFrontTemp
-    idealmaxValue = carInfo.discData.idealMaxFrontTemp
-    maxValue = carInfo.discData.maxFrontTemp
+    idealMinValue = carData.discData.idealMinFrontTemp
+    minValue = carData.discData.minFrontTemp
+    idealMaxValue = carData.discData.idealMaxFrontTemp
+    maxValue = carData.discData.maxFrontTemp
   else
-    idealminValue = carInfo.discData.idealMinRearTemp
-    minValue = carInfo.discData.minRearTemp
-    idealmaxValue = carInfo.discData.idealMaxRearTemp
-    maxValue = carInfo.discData.maxRearTemp
+    idealMinValue = carData.discData.idealMinRearTemp
+    minValue = carData.discData.minRearTemp
+    idealMaxValue = carData.discData.idealMaxRearTemp
+    maxValue = carData.discData.maxRearTemp
   end
 
   local mappedProgress
-  if DiscTemp < idealminValue then
-    mappedProgress = (idealminValue - DiscTemp) / (idealminValue - minValue)
-  elseif DiscTemp > idealmaxValue then
-    mappedProgress = (DiscTemp - idealmaxValue) / (maxValue - idealmaxValue)
+  if DiscTemp < idealMinValue then
+    local denom = math.max(idealMinValue - minValue, 1e-6)
+    mappedProgress = (idealMinValue - DiscTemp) / denom
+  elseif DiscTemp > idealMaxValue then
+    local denom = math.max(maxValue - idealMaxValue, 1e-6)
+    mappedProgress = (DiscTemp - idealMaxValue) / denom
   else
     mappedProgress = 1
   end
   mappedProgress = math.min(math.max(mappedProgress, 0), 1)
-  if DiscTemp < idealminValue then
+  if DiscTemp < idealMinValue then
     greenComponent = 1 - mappedProgress
     blueComponent = mappedProgress
-  elseif DiscTemp > idealmaxValue then
+  elseif DiscTemp > idealMaxValue then
     greenComponent = 1 - mappedProgress
     redComponent = mappedProgress
   else
@@ -174,353 +487,218 @@ local function getDiscColor(DiscTemp, front)
   return rgbm(redComponent, greenComponent, blueComponent, 1)
 end
 
----comment
----@param tyre ac.StateWheel
----@param rectSize vec2
----@param front boolean
-local function drawTyreLeft(tyre, rectSize, front)
-  ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
-  if config.showGrain then
-    progressBarV(tyre.tyreGrain, vec2(8 * config.Scale, rectSize.y), rgbm.colors.maroon)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text(
-          "Tyre Grain\nThis doesn't seem to be well managed,\nif you drive with cold tires,\nit only increases more")
-        ui.popFont()
-      end)
-    end
-    ui.sameLine()
-  end
-  if config.showBlister then
-    progressBarV(tyre.tyreBlister, vec2(8 * config.Scale, rectSize.y), rgbm.colors.olive)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("Tyre Blister")
-        ui.popFont()
-      end)
-    end
-    ui.sameLine()
-  end
-  if config.showFlatSpot then
-    progressBarV(tyre.tyreFlatSpot, vec2(8 * config.Scale, rectSize.y), rgbm.colors.silver)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("Tyre FlatSpot")
-        ui.popFont()
-      end)
-    end
-    ui.sameLine()
-  end
-  if config.showLoad then
-    progressBarV(tyre.load / 10000, vec2(8 * config.Scale, rectSize.y), rgbm.colors.orange)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("Tyre Load")
-        ui.popFont()
-      end)
-    end
-  end
-  ui.sameLine()
-  ui.popStyleVar()
-  ui.beginGroup()
-  if config.showToeIn then
-    toeIn(tyre.toeIn, vec2(rectSize.x * 3, 10 * config.Scale), rgbm.colors.cyan)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("ToeIn")
-        ui.popFont()
-      end)
-    end
-  end
-  ui.setCursorX(ui.getCursorX() + 3 * config.Scale)
+local function drawWearProgress(tyre, rectSize, isFront)
+  drawVerticalProgressBar(tyre.isBlown == false and 1 - tyre.tyreWear or 0, vec2(12 * settings.Scale, rectSize.y),
+    wearColorFor(tyre.tyreVirtualKM, isFront))
+  drawTyreTooltip("Tyre Wear")
+end
 
-  ui.beginRotation()
-  local startPosition = ui.getCursor()
-  local startCore = vec2(startPosition.x + 1, startPosition.y + 12)
-  local startSlip = vec2(startPosition.x + 1, startPosition.y)
-  if config.showDisc and carInfo.isDiscAvailable then
-    local discPosition = vec2(startPosition.x + rectSize.x * 2, startPosition.y) +
-        vec2(19 * config.Scale, 10 * config.Scale)
-    ui.drawImage(images.brakeDiscLeft, discPosition,
-      discPosition + (rectSize - vec2(10 * config.Scale, 18 * config.Scale)),
-      getDiscColor(tyre.discTemperature, front))
-  end
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    tyre.isBlown == false and getTyreColor(tyre.tyreInsideTemperature) or
-    rgbm(0, 0, 0, 1), 4)
-  startPosition.x = startPosition.x + rectSize.x + 1
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    tyre.isBlown == false and getTyreColor(tyre.tyreMiddleTemperature) or
-    rgbm(0, 0, 0, 1), 3)
-  startPosition.x = startPosition.x + rectSize.x + 1
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    tyre.isBlown == false and getTyreColor(tyre.tyreOutsideTemperature) or
-    rgbm(0, 0, 0, 1), 4)
-  local tyreLeft = 2
-  if front then
-    tyreLeft = 0
-  end
-  if tyrewheelLocks[tyreLeft].flatSpotValue ~= tyre.tyreFlatSpot then
-    tyrewheelLocks[tyreLeft].flatSpotValue = tyre.tyreFlatSpot
-    tyrewheelLocks[tyreLeft].wheelLock = true
+local function surfaceColor(rawValue)
+  local value = clamp(rawValue or 0, 0, 1)
+  if value < 0.20 then
+    return rgbm(0.20, 0.85, 0.20, 1)
+  elseif value < 0.45 then
+    return rgbm(0.95, 0.85, 0.20, 1)
+  elseif value < 0.70 then
+    return rgbm(1.00, 0.55, 0.10, 1)
   else
-    tyrewheelLocks[tyreLeft].wheelLock = false
-  end
-
-  local size = vec2(rectSize.x * 3, rectSize.y - 24)
-  if tyrewheelLocks[tyreLeft].wheelLock or tyre.isBlown then
-    ui.drawImage(images.core, startCore, startCore + size, rgbm.colors.white)
-  else
-    ui.drawImage(images.core, startCore, startCore + size,
-      getTyreColor(tyre.tyreCoreTemperature))
-  end
-
-  if tyre.tyreDirty > 0 and not tyre.isBlown then
-    local durtySize = vec2(rectSize.x, rectSize.y * (tyre.tyreDirty / 5.0))
-    local startDurty = ui.getCursor()
-    startDurty.y = startPosition.y + (rectSize.y - durtySize.y)
-    ui.drawRectFilled(startDurty, startDurty + durtySize, rgbm.colors.olive, 4)
-    startDurty.x = startDurty.x + rectSize.x + 1
-    ui.drawRectFilled(startDurty, startDurty + durtySize, rgbm.colors.olive, 3)
-    startDurty.x = startDurty.x + rectSize.x + 1
-    ui.drawRectFilled(startDurty, startDurty + durtySize, rgbm.colors.olive, 4)
-  end
-
-  if tyre.ndSlip > 1 and not tyre.isBlown then
-    local sizeSlip = vec2(rectSize.x * 3, rectSize.y)
-    ui.drawImage(images.slip, startSlip, startSlip + sizeSlip, rgbm.colors.orange)
-  end
-
-  local avg = 0
-  if front then
-    avg = tyre.tyrePressure - carInfo.idealFrontPressure
-  else
-    avg = tyre.tyrePressure - carInfo.idealRearPressure
-  end
-  local infos = string.format("Core %d°\n%.1f PSI\n%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
-  if avg >= 0 then
-    infos = string.format("Core %d°\n%.1f PSI\n+%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
-  end
-  if tyre.isBlown then
-    infos = "Blown"
-  end
-  ui.dwriteDrawTextClipped(infos, 11 * config.Scale, ui.getCursor(), ui.getCursor() + vec2(rectSize.x * 3, rectSize.y),
-    ui.Alignment.Center, ui.Alignment.Center, false, rgbm.colors.black)
-  local camber = math.min(math.max(tyre.camber, -4), 4)
-  ui.endRotation(90 + camber)
-
-  ui.dummy(vec2(rectSize.x * 3.3, rectSize.y))
-
-  if tyre.isBlown then
-    ui.dwriteTextAligned(
-      string.format(" %4s%4s%4s", "-", "-", "-"),
-      8 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
-      rgbm.colors.white)
-  else
-    ui.dwriteTextAligned(
-      string.format(" %4d%4d%4d", tyre.tyreInsideTemperature, tyre.tyreMiddleTemperature, tyre.tyreOutsideTemperature),
-      8 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
-      rgbm.colors.white)
-  end
-  if config.showWearGrip then
-    if front and carInfo.frontWearCurve ~= nil then
-      ui.dwriteTextAligned(string.format(" %0.2f%%", carInfo.frontWearCurve:get(tyre.tyreVirtualKM)), 8 * config.Scale,
-        ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false, rgbm.colors.white)
-    elseif carInfo.rearWearCurve ~= nil then
-      ui.dwriteTextAligned(string.format(" %0.2f%%", carInfo.rearWearCurve:get(tyre.tyreVirtualKM)), 8 * config.Scale,
-        ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false, rgbm.colors.white)
-    end
-  end
-  ui.endGroup()
-  ui.sameLine()
-  WearProgress(tyre.isBlown == false and 1 - tyre.tyreWear or 0, tyre.tyreVirtualKM, vec2(10 * config.Scale, rectSize.y),
-    rgbm.colors.green, front)
-  if ui.itemHovered() then
-    ui.tooltip(function()
-      ui.pushFont(ui.Font.Monospace)
-      ui.text("Tyre Wear")
-      ui.popFont()
-    end)
+    return rgbm(0.95, 0.20, 0.20, 1)
   end
 end
 
----comment
----@param tyre ac.StateWheel
----@param rectSize vec2
----@param front boolean
-local function drawTyreRight(tyre, rectSize, front)
-  WearProgress(tyre.isBlown == false and 1 - tyre.tyreWear or 0, tyre.tyreVirtualKM, vec2(10 * config.Scale, rectSize.y),
-    rgbm.colors.green, front)
-  if ui.itemHovered() then
-    ui.tooltip(function()
-      ui.pushFont(ui.Font.Monospace)
-      ui.text("Tyre Wear")
-      ui.popFont()
-    end)
-  end
-  ui.sameLine()
-  ui.setCursorX(ui.getCursorX() + 1)
-  ui.beginGroup()
-  if config.showToeIn then
-    toeIn(tyre.toeIn, vec2(rectSize.x * 3, 10 * config.Scale), rgbm.colors.cyan)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("ToeIn")
-        ui.popFont()
-      end)
-    end
-  end
-  ui.setCursorX(ui.getCursorX() + 3 * config.Scale)
+local function drawBox(pos, size, color, rounding)
+  ui.drawRectFilled(pos, pos + size, color, rounding or 4)
+end
 
-  local startPosition = ui.getCursor()
-  local startCore = vec2(startPosition.x + 1, startPosition.y + 12)
-  local startSlip = vec2(startPosition.x + 1, startPosition.y)
+local function drawCenteredTextBox(text, pos, size, fontSize, bgColor, textColor)
+  drawBox(pos, size, bgColor or PANEL_BACKGROUND, 4)
+  ui.dwriteDrawTextClipped(text, fontSize, pos, pos + size, ui.Alignment.Center, ui.Alignment.Center, false,
+    textColor or TEXT_COLOR)
+end
 
-  ui.beginRotation()
+local function drawDisc(tyre, rectSize, isFront, isLeft)
+  local discWidth = math.max(16 * settings.Scale, rectSize.x)
+  local discSize = vec2(discWidth, rectSize.y)
+  local pos = ui.getCursor()
+  local image = isLeft and images.brakeDiscLeft or images.brakeDiscRight
+  local tyreID = (isFront and 0 or 2) + (isLeft and 0 or 1)
+  local discColor = getDiscColor(carData:getDiscTemp(tyre, tyreID), isFront)
+  local p1 = pos + vec2(2, 2)
+  local p2 = pos + discSize - vec2(2, 2)
+  ui.drawImage(image, p1, p2, discColor)
+  ui.dummy(discSize)
+end
 
-  local discPosition = startPosition + vec2(-7 * config.Scale, 10 * config.Scale)
-  if config.showDisc and carInfo.isDiscAvailable then
-    ui.drawImage(images.brakeDiscRight, discPosition,
-      discPosition + (rectSize - vec2(10 * config.Scale, 18 * config.Scale)),
-      getDiscColor(tyre.discTemperature, front))
-  end
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    tyre.isBlown == false and getTyreColor(tyre.tyreInsideTemperature) or
-    rgbm(0, 0, 0, 1), 4)
-  startPosition.x = startPosition.x + rectSize.x + 1
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    tyre.isBlown == false and getTyreColor(tyre.tyreMiddleTemperature) or
-    rgbm(0, 0, 0, 1), 3)
-  startPosition.x = startPosition.x + rectSize.x + 1
-  ui.drawRectFilled(startPosition, startPosition + rectSize,
-    tyre.isBlown == false and getTyreColor(tyre.tyreOutsideTemperature) or
-    rgbm(0, 0, 0, 1), 4)
-
-  local tyreRight = 3
-  if front then
-    tyreRight = 1
-  end
-  if tyrewheelLocks[tyreRight].flatSpotValue ~= tyre.tyreFlatSpot then
-    tyrewheelLocks[tyreRight].flatSpotValue = tyre.tyreFlatSpot
-    tyrewheelLocks[tyreRight].wheelLock = true
-  else
-    tyrewheelLocks[tyreRight].wheelLock = false
-  end
-  local sizeCore = vec2(rectSize.x * 3, rectSize.y - 24)
-  if tyrewheelLocks[tyreRight].wheelLock or tyre.isBlown then
-    ui.drawImage(images.core, startCore, startCore + sizeCore, rgbm.colors.white)
-  else
-    ui.drawImage(images.core, startCore, startCore + sizeCore,
-      getTyreColor(tyre.tyreCoreTemperature))
+local function isWheelSlipping(wheel)
+  if not wheel or wheel.isBlown then
+    return false
   end
 
-  if tyre.tyreDirty > 0 and not tyre.isBlown then
-    local durtySize = vec2(rectSize.x, rectSize.y * (tyre.tyreDirty / 5.0))
-    local startDurty = ui.getCursor()
-    startDurty.y = startPosition.y + (rectSize.y - durtySize.y)
-    ui.drawRectFilled(startDurty, startDurty + durtySize, rgbm.colors.olive, 4)
-    startDurty.x = startDurty.x + rectSize.x + 1
-    ui.drawRectFilled(startDurty, startDurty + durtySize, rgbm.colors.olive, 3)
-    startDurty.x = startDurty.x + rectSize.x + 1
-    ui.drawRectFilled(startDurty, startDurty + durtySize, rgbm.colors.olive, 4)
-  end
-  if tyre.ndSlip > 1 and not tyre.isBlown then
-    local sizeSlip = vec2(rectSize.x * 3, rectSize.y)
-    ui.drawImage(images.slip, startSlip, startSlip + sizeSlip, rgbm.colors.orange)
-  end
-  local avg = 0
-  if front then
-    avg = tyre.tyrePressure - carInfo.idealFrontPressure
-  else
-    avg = tyre.tyrePressure - carInfo.idealRearPressure
-  end
-  local infos = string.format("Core %d°\n%.1f PSI\n%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
-  if avg >= 0 then
-    infos = string.format("Core %d°\n%.1f PSI\n+%0.1f", tyre.tyreCoreTemperature, tyre.tyrePressure, avg)
-  end
-  if tyre.isBlown then
-    infos = "Blown"
-  end
-  ui.dwriteDrawTextClipped(infos, 11 * config.Scale, ui.getCursor(), ui.getCursor() + vec2(rectSize.x * 3, rectSize.y),
-    ui.Alignment.Center, ui.Alignment.Center, false, rgbm.colors.black)
-  local camber = math.min(math.max(tyre.camber, -4), 4)
+  local slip = math.abs(wheel.ndSlip or 0)
+  local slipRatio = math.abs(wheel.slipRatio or 0)
+  local slipAngle = math.abs(wheel.slipAngle or 0)
+  return slipRatio > 0.10 or slipAngle > 5 or slip > 1
+end
 
-  ui.endRotation(90 - camber)
+local function drawInfoBarsCompact(tyre, rectSize, reverseOrder, isFront)
+  local barWidth = 10 * settings.Scale
+  local labelHeight = math.min(10 * settings.Scale, rectSize.y * 0.22)
+  local trackedBarHeight = math.max(18 * settings.Scale, rectSize.y - labelHeight)
+  local surfaceAvailable = isFront and carData.surfaceData.front.available or carData.surfaceData.rear.available
+  local barConfigs = {
+    { settings.showFlatSpot,                     tyre.tyreFlatSpot,                  rgbm.colors.silver,             rgbm(0.32, 0.32, 0.36, 0.55), "F", "FlatSpot" },
+    { settings.showBlister and surfaceAvailable, clamp(tyre.tyreBlister or 0, 0, 1), surfaceColor(tyre.tyreBlister), rgbm(0.33, 0.24, 0.12, 0.55), "B", "Blister" },
+    { settings.showGrain and surfaceAvailable,   clamp(tyre.tyreGrain or 0, 0, 1),   surfaceColor(tyre.tyreGrain),   rgbm(0.22, 0.12, 0.12, 0.55), "G", "Grain" },
+  }
 
-  ui.dummy(vec2(rectSize.x * 3.3, rectSize.y))
-  if tyre.isBlown then
-    ui.dwriteTextAligned(
-      string.format(" %4s%4s%4s", "-", "-", "-"),
-      8 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
-      rgbm.colors.white)
-  else
-    ui.dwriteTextAligned(
-      string.format(" %4d%4d%4d", tyre.tyreInsideTemperature, tyre.tyreMiddleTemperature, tyre.tyreOutsideTemperature),
-      8 * config.Scale, ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false,
-      rgbm.colors.white)
-  end
-  if config.showWearGrip then
-    if front and carInfo.frontWearCurve ~= nil then
-      ui.dwriteTextAligned(string.format(" %0.2f%%", carInfo.frontWearCurve:get(tyre.tyreVirtualKM)), 8 * config.Scale,
-        ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false, rgbm.colors.white)
-    elseif carInfo.rearWearCurve ~= nil then
-      ui.dwriteTextAligned(string.format(" %0.2f%%", carInfo.rearWearCurve:get(tyre.tyreVirtualKM)), 8 * config.Scale,
-        ui.Alignment.Center, ui.Alignment.Center, vec2(rectSize.x * 3, 9 * config.Scale), false, rgbm.colors.white)
-    end
-  end
-  ui.endGroup()
-  ui.pushStyleVar(ui.StyleVar.ItemSpacing, 1)
-  if config.showLoad then
-    ui.sameLine()
-    progressBarV(tyre.load / 10000, vec2(8 * config.Scale, rectSize.y), rgbm.colors.orange)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("Tyre Load")
-        ui.popFont()
-      end)
-    end
-  end
-  if config.showFlatSpot then
-    ui.sameLine()
-    progressBarV(tyre.tyreFlatSpot, vec2(8 * config.Scale, rectSize.y), rgbm.colors.silver)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("Tyre FlatSpot")
-        ui.popFont()
-      end)
-    end
-  end
-  if config.showBlister then
-    ui.sameLine()
-    progressBarV(tyre.tyreBlister, vec2(8 * config.Scale, rectSize.y), rgbm.colors.olive)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("Tyre Blister")
-        ui.popFont()
-      end)
-    end
-  end
-  if config.showGrain then
-    ui.sameLine()
-    progressBarV(tyre.tyreGrain, vec2(8 * config.Scale, rectSize.y), rgbm.colors.maroon)
-    if ui.itemHovered() then
-      ui.tooltip(function()
-        ui.pushFont(ui.Font.Monospace)
-        ui.text("Tyre Grain\nThis doesn't seem to be well managed,\nif you drive with cold tires,\nit only increases")
-        ui.popFont()
-      end)
+  local order = reverseOrder and { 3, 2, 1 } or { 1, 2, 3 }
+  ui.pushStyleVar(ui.StyleVar.ItemSpacing, vec2(2 * settings.Scale, 0))
+  local drawn = false
+  for _, i in ipairs(order) do
+    local barConfig = barConfigs[i]
+    if barConfig[1] then
+      if drawn then ui.sameLine() end
+      drawTrackedVerticalBar(barConfig[2], vec2(barWidth, trackedBarHeight), barConfig[3], barConfig[4], barConfig[5])
+      drawTyreTooltip("Tyre " .. barConfig[6])
+      drawn = true
     end
   end
   ui.popStyleVar()
+end
+
+local function drawTyreCard(tyre, rectSize, isFront, isLeft)
+  ui.beginGroup()
+  local pos = ui.getCursor()
+  local sectionSpacing = 2 * settings.Scale
+  local bandWidth = rectSize.x * 3 + sectionSpacing * 2
+  local tempBandHeight = 12 * settings.Scale
+  local coreHeight = 44 * settings.Scale
+  local valueRowHeight = 11 * settings.Scale
+  local gripRowHeight = settings.showWearGrip and (15 * settings.Scale) or 0
+  local innerWidth = (bandWidth - sectionSpacing * 2) / 3
+  local coreInset = math.max(1, 6 * settings.Scale - 5)
+  local tyreBodyHeight = tempBandHeight * 2 + coreHeight + sectionSpacing * 2
+
+  local displayTemps = isLeft and {
+    tyre.tyreOutsideTemperature,
+    tyre.tyreMiddleTemperature,
+    tyre.tyreInsideTemperature,
+  } or {
+    tyre.tyreInsideTemperature,
+    tyre.tyreMiddleTemperature,
+    tyre.tyreOutsideTemperature,
+  }
+
+  local tyreID = (isFront and 0 or 2) + (isLeft and 0 or 1)
+  local isBlown = tyre.isBlown
+  if math.abs(tyrewheelLocks[tyreID].flatSpotValue - tyre.tyreFlatSpot) > FLATSPOT_EPSILON then
+    tyrewheelLocks[tyreID].flatSpotValue = tyre.tyreFlatSpot
+    tyrewheelLocks[tyreID].wheelLock = true
+  else
+    tyrewheelLocks[tyreID].wheelLock = false
+  end
+
+  local coreWidth = math.min(bandWidth, bandWidth - coreInset * 2 + 10 * settings.Scale)
+  local corePos = pos + vec2((bandWidth - coreWidth) * 0.5, tempBandHeight + sectionSpacing)
+  local coreSize = vec2(coreWidth, coreHeight)
+
+  for k = 0, 2 do
+    local p1 = vec2(pos.x + k * (innerWidth + sectionSpacing), pos.y)
+    local p2 = p1 + vec2(innerWidth, tyreBodyHeight)
+    local temp = displayTemps[k + 1]
+    ui.drawRectFilled(p1, p2, isBlown and rgbm(0, 0, 0, 1) or getTyreColor(temp), (k == 0 or k == 2) and 4 or 3)
+  end
+
+  local coreColor = (tyrewheelLocks[tyreID].wheelLock or isBlown)
+      and rgbm(1, 1, 1, 0.7)
+      or getTyreColor(tyre.tyreCoreTemperature)
+  ui.drawRectFilled(corePos, corePos + coreSize, coreColor, 5)
+
+  if tyre.tyreDirty > 0 and not isBlown then
+    local dirtHeight = coreHeight * math.min(tyre.tyreDirty / 5.0, 1)
+    ui.drawRectFilled(corePos + vec2(0, coreHeight - dirtHeight), corePos + coreSize, rgbm(0.45, 0.42, 0.14, 0.55), 4)
+  end
+
+  if isWheelSlipping(tyre) then
+    ui.drawImage(images.slip, pos, pos + vec2(bandWidth, tyreBodyHeight), rgbm.colors.orange)
+  end
+
+  local idealPressure = isFront and carData.idealFrontPressure or carData.idealRearPressure
+  local deltaText = "N/A"
+  if idealPressure ~= nil and idealPressure > 0 then
+    deltaText = string.format("%+.1f", tyre.tyrePressure - idealPressure)
+  end
+  local infoText = isBlown and "Blown" or
+      string.format("Core %d C\n%.1f PSI\n%s", tyre.tyreCoreTemperature, tyre.tyrePressure, deltaText)
+  ui.dwriteDrawTextClipped(infoText, 11 * settings.Scale, corePos, corePos + coreSize, ui.Alignment.Center,
+    ui.Alignment.Center, false, rgbm.colors.black)
+  ui.dummy(vec2(bandWidth, tyreBodyHeight + sectionSpacing))
+
+  local temperature = {
+    isBlown and "--" or string.format("%d", displayTemps[1]),
+    isBlown and "--" or string.format("%d", displayTemps[2]),
+    isBlown and "--" or string.format("%d", displayTemps[3]),
+  }
+  pos = ui.getCursor()
+  for k = 0, 2 do
+    local p1 = vec2(pos.x + k * (innerWidth + sectionSpacing), pos.y)
+    drawCenteredTextBox(temperature[k + 1], p1, vec2(innerWidth, valueRowHeight), 8 * settings.Scale,
+      PANEL_BACKGROUND, TEXT_COLOR)
+  end
+  ui.dummy(vec2(bandWidth, valueRowHeight))
+
+  if settings.showWearGrip then
+    pos = ui.getCursor()
+    drawCenteredTextBox(string.format("Grip %0.2f%%", computeTyreGripPercent(tyre, isFront)),
+      pos, vec2(bandWidth, gripRowHeight), 8 * settings.Scale, PANEL_BACKGROUND, TEXT_COLOR)
+    ui.dummy(vec2(bandWidth, gripRowHeight))
+  end
+  ui.endGroup()
+end
+
+local function drawTyreLayoutLeft(tyre, rectSize, isFront)
+  ui.beginGroup()
+  ui.pushStyleVar(ui.StyleVar.ItemSpacing, vec2(4 * settings.Scale, 0))
+  drawInfoBarsCompact(tyre, rectSize, true, isFront)
+  ui.sameLine()
+
+  ui.beginRotation()
+  drawTyreCard(tyre, rectSize, isFront, true)
+  ui.popStyleVar()
+  if settings.showDisc and carData.isDiscAvailable then
+    ui.pushStyleVar(ui.StyleVar.ItemSpacing, 0)
+    ui.sameLine()
+    drawDisc(tyre, rectSize, isFront, true)
+    ui.popStyleVar()
+  end
+  ui.endRotation(90 + (settings.showCamberRotation and getSafeCamber(tyre) or 0))
+  ui.pushStyleVar(ui.StyleVar.ItemSpacing, vec2(4 * settings.Scale, 0))
+  ui.sameLine()
+  drawWearProgress(tyre, rectSize, isFront)
+  ui.popStyleVar()
+  ui.endGroup()
+end
+
+local function drawTyreLayoutRight(tyre, rectSize, isFront)
+  ui.beginGroup()
+  ui.pushStyleVar(ui.StyleVar.ItemSpacing, vec2(4 * settings.Scale, 0))
+  drawWearProgress(tyre, rectSize, isFront)
+  ui.sameLine()
+  ui.popStyleVar()
+  ui.beginRotation()
+  if settings.showDisc and carData.isDiscAvailable then
+    ui.pushStyleVar(ui.StyleVar.ItemSpacing, 0)
+    drawDisc(tyre, rectSize, isFront, false)
+    ui.sameLine()
+    ui.popStyleVar()
+  end
+  ui.pushStyleVar(ui.StyleVar.ItemSpacing, vec2(4 * settings.Scale, 0))
+  drawTyreCard(tyre, rectSize, isFront, false)
+  ui.endRotation(90 - (settings.showCamberRotation and getSafeCamber(tyre) or 0))
+  ui.sameLine()
+  drawInfoBarsCompact(tyre, rectSize, false, isFront)
+  ui.popStyleVar()
+  ui.endGroup()
 end
 
 local function showGripInfo(pos, size)
@@ -529,266 +707,173 @@ local function showGripInfo(pos, size)
   ui.drawRectFilled(ui.getCursor(), ui.getCursor() + contentSize, rgbm(0.2, 0.2, 0.2, 1), 15,
     ui.CornerFlags.TopRight + ui.CornerFlags.BottomRight)
   ui.pushDWriteFont('montserrat:/fonts')
-  local frontWear = carInfo.frontWearCurve
-  local rearWear = carInfo.rearWearCurve
-  local tyreConsumptionRate = ac.getSim().tyreConsumptionRate
-  if frontWear ~= nil then
-    gripInfos.frontLoaded = true
-    ui.dwriteText("Front:", 12 * config.Scale, rgbm(0.7, 1, 0.5, 1))
-    for i = 0, #frontWear - 1 do
-      local grip = frontWear:getPointOutput(i)
-      if grip > 99.5 then
-        gripInfos.frontHigh = 85 * frontWear:getPointInput(i) / tyreConsumptionRate
-      end
-      if (grip < 99.5) and (grip > 97) then
-        gripInfos.frontMedium = 85 * frontWear:getPointInput(i) / tyreConsumptionRate
-      end
-      if grip < 97 then
-        gripInfos.frontLow = 85 * frontWear:getPointInput(i) / tyreConsumptionRate
-      end
-    end
-    local tracklenght = ac.getSim().trackLengthM / 1000
-    ui.dwriteText(
-      string.format("High grip ± %.1f Km (%0.1f lap)", gripInfos.frontHigh, gripInfos.frontHigh / tracklenght),
-      10 * config.Scale, rgbm.colors.white)
-    ui.dwriteText(
-      string.format("Medium grip ± %.1f Km (%0.1f lap)", gripInfos.frontMedium, gripInfos.frontMedium / tracklenght),
-      10 * config.Scale, rgbm.colors.white)
-    ui.dwriteText(string.format("Low grip ± %.1f Km (%0.1f lap)", gripInfos.frontLow, gripInfos.frontLow / tracklenght),
-      10 * config.Scale, rgbm.colors.white)
-  else
-    ui.dwriteText("No rear lut info !", 10 * config.Scale, rgbm.colors.white)
+  local simState = ac.getSim()
+  local trackLengthKm = math.max(simState.trackLengthM / 1000, 1e-6)
+  local tyreConsumptionRate = math.max(simState.tyreConsumptionRate, 1e-6)
+  local frontWearCurve = carData.frontWearCurve
+  local rearWearCurve = carData.rearWearCurve
+  local compoundIndex = carData.carState and carData.carState.compoundIndex or -1
+
+  local isGripCacheInvalid = not gripCache.valid
+      or gripCache.compoundIndex ~= compoundIndex
+      or gripCache.frontWearCurve ~= frontWearCurve
+      or gripCache.rearWearCurve ~= rearWearCurve
+      or math.abs(gripCache.tyreConsumptionRate - tyreConsumptionRate) > 1e-6
+      or math.abs(gripCache.trackLengthKm - trackLengthKm) > 1e-6
+
+  if isGripCacheInvalid then
+    gripInfos.frontLoaded = frontWearCurve ~= nil
+    gripInfos.frontHigh, gripInfos.frontMedium, gripInfos.frontLow = computeGripRanges(frontWearCurve,
+      tyreConsumptionRate)
+    gripInfos.rearLoaded = rearWearCurve ~= nil
+    gripInfos.rearHigh, gripInfos.rearMedium, gripInfos.rearLow = computeGripRanges(rearWearCurve, tyreConsumptionRate)
+
+    gripCache.valid = true
+    gripCache.compoundIndex = compoundIndex
+    gripCache.frontWearCurve = frontWearCurve
+    gripCache.rearWearCurve = rearWearCurve
+    gripCache.tyreConsumptionRate = tyreConsumptionRate
+    gripCache.trackLengthKm = trackLengthKm
   end
-  if rearWear ~= nil then
-    gripInfos.rearLoaded = true
-    ui.dwriteText("Rear:", 12 * config.Scale, rgbm(0.7, 1, 0.5, 1))
-    for i = 0, #rearWear - 1 do
-      local grip = rearWear:getPointOutput(i)
-      if grip > 99.5 then
-        gripInfos.RearHigh = 85 * rearWear:getPointInput(i) / tyreConsumptionRate
-      end
-      if (grip < 99.5) and (grip > 97) then
-        gripInfos.RearMedium = 85 * rearWear:getPointInput(i) / tyreConsumptionRate
-      end
-      if grip < 97 then
-        gripInfos.RearLow = 85 * rearWear:getPointInput(i) / tyreConsumptionRate
-      end
-    end
-    local tracklenght = ac.getSim().trackLengthM / 1000
-    ui.dwriteText(string.format("High grip ± %.1f Km (%0.1f lap)", gripInfos.RearHigh, gripInfos.RearHigh / tracklenght),
-      10 * config.Scale, rgbm.colors.white)
+
+  if gripInfos.frontLoaded then
+    ui.dwriteText("Front grip:", 12 * settings.Scale, rgbm(0.7, 1, 0.5, 1))
     ui.dwriteText(
-      string.format("Medium grip ± %.1f Km (%0.1f lap)", gripInfos.RearMedium, gripInfos.RearMedium / tracklenght),
-      10 * config.Scale, rgbm.colors.white)
-    ui.dwriteText(string.format("Low grip ± %.1f Km (%0.1f lap)", gripInfos.RearLow, gripInfos.RearLow / tracklenght),
-      10 * config.Scale, rgbm.colors.white)
+      string.format("High +/- %.1f Km (%0.1f lap)", gripInfos.frontHigh, gripInfos.frontHigh / trackLengthKm),
+      10 * settings.Scale, rgbm.colors.white)
+    ui.dwriteText(
+      string.format("Medium +/- %.1f Km (%0.1f lap)", gripInfos.frontMedium, gripInfos.frontMedium / trackLengthKm),
+      10 * settings.Scale, rgbm.colors.white)
+    ui.dwriteText(
+      string.format("Low +/- %.1f Km (%0.1f lap)", gripInfos.frontLow, gripInfos.frontLow / trackLengthKm),
+      10 * settings.Scale, rgbm.colors.white)
   else
-    ui.dwriteText("No rear lut info !", 10 * config.Scale, rgbm.colors.white)
+    ui.dwriteText("No front LUT info!", 10 * settings.Scale, rgbm.colors.white)
+  end
+
+  if gripInfos.rearLoaded then
+    ui.newLine()
+    ui.dwriteText("Rear grip:", 12 * settings.Scale, rgbm(0.7, 1, 0.5, 1))
+    ui.dwriteText(
+      string.format("High +/- %.1f Km (%0.1f lap)", gripInfos.rearHigh, gripInfos.rearHigh / trackLengthKm),
+      10 * settings.Scale, rgbm.colors.white)
+    ui.dwriteText(
+      string.format("Medium +/- %.1f Km (%0.1f lap)", gripInfos.rearMedium, gripInfos.rearMedium / trackLengthKm),
+      10 * settings.Scale, rgbm.colors.white)
+    ui.dwriteText(
+      string.format("Low +/- %.1f Km (%0.1f lap)", gripInfos.rearLow, gripInfos.rearLow / trackLengthKm),
+      10 * settings.Scale, rgbm.colors.white)
+  else
+    ui.dwriteText("No rear LUT info!", 10 * settings.Scale, rgbm.colors.white)
   end
   ui.popDWriteFont()
   ui.endTransparentWindow()
 end
-
 local function mouseInWindow()
   return ui.mousePos() > ui.windowPos() and ui.mousePos() < ui.windowPos() + ui.windowSize()
 end
 
 function script.windowMain(dt)
-  ac.setWindowTitle('windowMain', string.format('SRA Tyres v%2.3f', VERSION))
-  ui.pushDWriteFont('montserrat:/fonts')
+  ac.setWindowTitle('windowMain', string.format('SRA Tyres v%2.2f', VERSION))
+  ui.pushDWriteFont('montserrat:/fonts;Weight=Bold')
+
+  if carData.carState == nil then
+    ui.dwriteText("Waiting for car data...", 10 * settings.Scale, rgbm.colors.white)
+    ui.popDWriteFont()
+    return
+  end
+
   local drawOffset = ui.getCursor()
   local contentSize = ui.windowSize():sub(drawOffset)
   display.rect({ pos = drawOffset, size = contentSize, color = rgbm(0.1, 0.1, 0.1, 0.3) })
 
-  local tyreSize = vec2(18 * config.Scale, 70 * config.Scale)
+  local tyreSize = vec2(18 * settings.Scale, 70 * settings.Scale)
+  ui.pushStyleVar(ui.StyleVar.ItemSpacing, vec2(10 * settings.Scale, 8 * settings.Scale))
 
-  if config.showTyreName then
-    ui.dwriteText(string.format("Tyre : %s", ac.getTyresLongName(0, carInfo.carState.compoundIndex)), 10 * config.Scale,
+  if settings.showTyreName then
+    ui.dwriteText(string.format("Tyre : %s", ac.getTyresLongName(0, carData.carState.compoundIndex)), 10 * settings
+      .Scale,
       rgbm.colors.white)
   end
-  if config.showOptimal then
-    ui.dwriteText(string.format("Optimum Temperature : %3.0f° - %3.0f°", carInfo.minThermal, carInfo.maxThermal),
-      10 * config.Scale, rgbm.colors.white)
+  if settings.showOptimal then
+    ui.dwriteText(string.format("Optimum Temp : %3.0f°C - %3.0f°C", carData.minThermal, carData.maxThermal),
+      10 * settings.Scale, rgbm.colors.white)
   end
 
   ui.separator()
 
-  drawTyreLeft(carInfo:getTyreFL(), tyreSize, true)
+  drawTyreLayoutLeft(carData:getTyreFL(), tyreSize, true)
   ui.sameLine()
-  drawTyreRight(carInfo:getTyreFR(), tyreSize, true)
+  drawTyreLayoutRight(carData:getTyreFR(), tyreSize, true)
   if ui.mouseClicked(ui.MouseButton.Middle) and mouseInWindow() then
     isShowGripInfo = not isShowGripInfo
   end
-  ui.separator()
-
-  drawTyreLeft(carInfo:getTyreRL(), tyreSize, false)
+  drawTyreLayoutLeft(carData:getTyreRL(), tyreSize, false)
   ui.sameLine()
-  drawTyreRight(carInfo:getTyreRR(), tyreSize, false)
+  drawTyreLayoutRight(carData:getTyreRR(), tyreSize, false)
+  ui.popStyleVar()
   ui.popDWriteFont()
   if isShowGripInfo then
-    showGripInfo(ui.windowPos() + vec2(ui.windowSize().x, 22), vec2(170 * config.Scale, ui.windowSize().y - 22))
+    showGripInfo(ui.windowPos() + vec2(ui.windowSize().x, 22), vec2(170 * settings.Scale, ui.windowSize().y - 22))
   end
 end
 
 function script.update(dt)
-  carInfo:setCarID(0)
-  carInfo:update(dt)
-  if ac.getSim().isInMainMenu then
-    ac.setWindowOpen("windowSetup", true)
-  end
+  if not isAppVisible then return end
+  carData:setCarID(0)
+  carData:update(dt)
 end
 
----@param title string
----@param value string
-local function inline(title, value)
-  ui.dwriteText(title, 15, rgbm.colors.white)
-  --ui.bulletText(title)
-  ui.sameLine(175)
-  ui.dwriteText(value, 15, rgbm.colors.lime)
-  --  ui.textColored(value, rgbm.colors.cyan)
-end
-
----@param tyre ac.StateWheel
-local function showTyreInfo(tyre, front)
-  inline("- Static Pressure:", string.format("%2.2f PSI", tyre.tyreStaticPressure))
-  inline("- Pressure:", string.format("%2.2f PSI", tyre.tyrePressure))
-  local avg = 0
-  if front then
-    avg = tyre.tyrePressure - carInfo.idealFrontPressure
-  else
-    avg = tyre.tyrePressure - carInfo.idealRearPressure
-  end
-  local infos = string.format("%0.1f", avg)
-  if avg >= 0 then
-    infos = string.format("+%0.1f", avg)
-  end
-  inline("- Optimum:", infos)
-  inline("- Pressure:", string.format("%2.2f BAR", tyre.tyrePressure * 0.0689476))
-  inline("- Camber:", string.format("%2.2f° ", tyre.camber))
-  inline("- toeIn:", string.format("%2.2f° ", tyre.toeIn))
-  inline("- tyreWidth:", string.format("%2.f", tyre.tyreWidth * 1000))
-  inline("- fx:", string.format("%2.f", tyre.dx))
-  inline("- fy:", string.format("%2.f", tyre.dy))
-end
-
-local function tabTyres()
-  ui.dwriteText("Tyres Setup Assist", 15, rgbm.colors.red)
-
-  ui.columns(2, false, "##TyreTable")
-  ui.dwriteText("Front left", 15, rgbm.colors.orange)
-  showTyreInfo(carInfo:getTyreFL())
-  ui.nextColumn()
-  ui.dwriteText("Front right", 15, rgbm.colors.orange)
-  showTyreInfo(carInfo:getTyreFR())
-  ui.nextColumn()
-  ui.newLine()
-  ui.dwriteText("Rear left", 15, rgbm.colors.orange)
-  showTyreInfo(carInfo:getTyreRL())
-  ui.nextColumn()
-  ui.newLine()
-  ui.dwriteText("Rear right", 15, rgbm.colors.orange)
-  showTyreInfo(carInfo:getTyreRR())
-  ui.nextColumn()
-  ui.newLine()
-end
-
-local function drawTyre(degree, left, toe)
-  local size = vec2(40, 70)
-  local c = ui.getCursor()
-  c.x = c.x + 10
-  ui.beginRotation()
-  ui.drawRectFilled(c, c + size, rgbm.colors.red, 4)
-  if left then
-    ui.endRotation(90 + degree)
-  else
-    ui.endRotation(90 - degree)
-  end
-  ui.drawLine(vec2(c.x + size.x / 2, c.y - 2), vec2(c.x + size.x / 2, c.y + size.y + 2), rgbm.colors.yellow)
-  if not toe then
-    ui.drawLine(vec2(c.x - 10, c.y + size.y + 1), vec2(c.x + size.x + 10, c.y + size.y + 1), rgbm.colors.gray)
-  end
-  ui.dummy(vec2(size.x + 20, size.y))
-  ui.dwriteText(string.format("%2.2f°", degree), 15, rgbm.colors.white)
-end
-
-local function tabAlignment()
-  ui.dwriteText("Alignment Setup Assist", 15, rgbm.colors.red)
-  ui.columns(4, false, "##TyreTable")
-  ui.dwriteText("Camber", 15, rgbm.colors.orange)
-  ui.separator()
-  ui.nextColumn()
-  drawTyre(carInfo:getTyreFL().camber, true, false)
-  ui.nextColumn()
-  drawTyre(carInfo:getTyreFR().camber, false, false)
-  ui.nextColumn()
-  ui.nextColumn()
-  ui.nextColumn()
-  drawTyre(carInfo:getTyreRL().camber, true, false)
-  ui.nextColumn()
-  drawTyre(carInfo:getTyreRR().camber, false, false)
-  ui.nextColumn()
-  ui.nextColumn()
-  ui.dwriteText("ToeIn", 15, rgbm.colors.orange)
-  ui.separator()
-  ui.nextColumn()
-  drawTyre(carInfo:getTyreFL().toeIn, true, true)
-  ui.nextColumn()
-  drawTyre(carInfo:getTyreFR().toeIn, false, true)
-  ui.nextColumn()
-  ui.nextColumn()
-  ui.nextColumn()
-  drawTyre(carInfo:getTyreRL().toeIn, true, true)
-  ui.nextColumn()
-  drawTyre(carInfo:getTyreRR().toeIn, false, true)
-  ui.newLine()
-end
-
-function script.windowSetup(dt)
-  ui.pushFont(ui.Font.Title)
-
-  ui.tabBar('TabBar##', function()
-    ui.tabItem('Tyres', tabTyres)
-    ui.tabItem('Alignment', tabAlignment)
-  end)
-
-  ui.popFont()
+local function drawTitleSetting(title)
+  local titleColor = rgbm(0.9, 0.5, 0.3, 1)
+  local titleSize = 16
+  ui.dwriteText(title, titleSize, titleColor)
 end
 
 function script.windowSetting(dt)
-  local newScale = ui.slider('##scaleSlider', config.Scale, 0.5, 2.0, 'Scale: %1.1f%')
+  drawTitleSetting("Scale")
+  local newScale = ui.slider('##scaleSlider', settings.Scale, 0.5, 3.0, 'Scale: %.2f')
   if ui.itemEdited() then
-    config.Scale = newScale
+    settings.Scale = newScale
   end
-  if ui.checkbox("Show Optimal", config.showOptimal) then
-    config.showOptimal = not config.showOptimal
-  end
-  if ui.checkbox("Show Tyres Name", config.showTyreName) then
-    config.showTyreName = not config.showTyreName
-  end
-  if ui.checkbox("Show ToeIn", config.showToeIn) then
-    config.showToeIn = not config.showToeIn
-  end
-  if ui.checkbox("Show Grain", config.showGrain) then
-    config.showGrain = not config.showGrain
-  end
-  if ui.checkbox("Show Blister", config.showBlister) then
-    config.showBlister = not config.showBlister
-  end
-  if ui.checkbox("Show FlatSpot", config.showFlatSpot) then
-    config.showFlatSpot = not config.showFlatSpot
-  end
-  if ui.checkbox("Show Load", config.showLoad) then
-    config.showLoad = not config.showLoad
-  end
-  if ui.checkbox("Show Disc", config.showDisc) then
-    config.showDisc = not config.showDisc
-  end
-  if ui.checkbox("Show Wear Grip", config.showWearGrip) then
-    config.showWearGrip = not config.showWearGrip
-  end
+  ui.newLine()
   ui.separator()
-  ui.sameLine(200)
-  if ui.iconButton(ui.Icons.Save, vec2(50, 0), 0, true, ui.ButtonFlags.Activable) then
-    config:save()
+
+  ui.beginGroup()
+  drawTitleSetting("Display")
+  if ui.checkbox("Show Optimal", settings.showOptimal) then
+    settings.showOptimal = not settings.showOptimal
   end
+  if ui.checkbox("Show Tyres Name", settings.showTyreName) then
+    settings.showTyreName = not settings.showTyreName
+  end
+  if ui.checkbox("Show Wear Grip", settings.showWearGrip) then
+    settings.showWearGrip = not settings.showWearGrip
+  end
+  if ui.checkbox("Show Disc", settings.showDisc) then
+    settings.showDisc = not settings.showDisc
+  end
+  if ui.checkbox("Show Camber Rotation", settings.showCamberRotation) then
+    settings.showCamberRotation = not settings.showCamberRotation
+  end
+  ui.endGroup()
+
+  ui.sameLine(0, 40)
+
+  ui.beginGroup()
+  drawTitleSetting("Surface")
+  if ui.checkbox("Show Grain", settings.showGrain) then
+    settings.showGrain = not settings.showGrain
+  end
+  if ui.checkbox("Show Blister", settings.showBlister) then
+    settings.showBlister = not settings.showBlister
+  end
+  if ui.checkbox("Show FlatSpot", settings.showFlatSpot) then
+    settings.showFlatSpot = not settings.showFlatSpot
+  end
+  ui.endGroup()
 end
+
+function script.onShowWindowMain() isAppVisible = true end
+
+function script.onHideWindowMain() isAppVisible = false end
