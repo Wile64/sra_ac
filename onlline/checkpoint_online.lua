@@ -464,7 +464,7 @@ for _1=1,#_0 do
   _0[_1]=string.char((_0[_1]-_2)%256)
 end
 local _3=table.concat(_0)
-local _4,_5=(loadstring or load)(_3,'@checkpoint_online_hybrid.lua')
+local _4,_5=(loadstring or load)(_3,'@checkpoint_online.lua')
 if not _4 then
   _G.__CHECKPOINT_DIST_CONFIG = nil
   error(_5)
