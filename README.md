@@ -103,24 +103,17 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 
 <p><img src="gapview_settings.png" /></p>
 
-
 ## sra_hud
 
-**Plusieus petits affichages .**
-
-<ul>
-<li>Race info</li>
-<li><img src="raceinfo.png" /></li>
-<li>Type de Session</li>
-<li>Position en course</li>
-<li>Nombre de tour</li>
-<li>Temps de session (online)</li>
-<li>Drapeau</li>
-</ul>
+**Plusieus Widgets.**
 <li>Heure locale et du serveur</li>
-<li><img src="time.png" /></li>
+<img src="time.png" />
+
+</br>
+
 <li>Affichage des temoins en mode transparent</li>
-<li><img src="leds.png" /></li>
+<img src="leds.png" />
+
 <ul>
 <li>DRS</li>
 <li>ABS</li>
@@ -129,20 +122,17 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Limiteur de vitesse</li>
 <li>Clignotants (droit et gauche)</li>
 <li>Warning</li>
-<li>Option de zoom</li>
 </ul>
-<li>Meilleurs tours</li>
-<li><img src="times.png" /></li>
+<li>Chronos</li>
+<img src="times.png" />
 <ul>
-<li>Delta</li>
 <li>Temps courant</li>
-<li>Temps par sercteur</li>
 <li>Temps dernier tour</li>
 <li>Meilleur temps de session</li>
-<li>Meilleur temps personnel</li>
+<li>Delta</li>
 </ul>
 <li>Secteurs</li>
-<li><img src="sectors.png" /></li>
+<img src="sectors.png" />
 <ul>
 <li>Temps par sercteur</li>
 <ul>
@@ -151,21 +141,47 @@ _* Certaines infos ne fonctionne pas pour les autres voitures._
 <li>Meilleur temps</li>
 </ul>
 </ul>
-<li>Condition climatique</li>
-<li><img src="weather.png" /></li>
+<li>Position</li>
+<img src="position.png" />
 <ul>
-<li>Température ambiente</li>
-<li>Température de la piste</li>
-<li>Météo (icone) et vitesse du vent </li>
+<li>Position en course</li>
+<li>Mode actuel</li>
+<li>Tours</li>
+<li>Drapeau</li>
 </ul>
-<li>Condition de course (online et offline)</li>
-<li><img src="race.png" /></li>
+<li>Speed</li>
+<img src="speed.png" />
 <ul>
-<li>Taux de Grip</li>
-<li>Taux de carburant</li>
-<li>Taux de dégat</li>
-<li>Taux d'usure des pneus</li>
+<li>Un speedOmetre</li>
 </ul>
+
+<li>Pedals</li>
+<img src="pedals.png" />
+<ul>
+<li>Affichage des pédales</li>
+</ul>
+<li>Panel</li>
+<img src="panel.png" />
+<ul>
+<li>Divers infos et réglages</li>
+</ul>
+
+<li>Delta</li>
+<img src="delta.png" />
+<ul>
+<li>Delta calculé</li>
+<li>Sauvegarde du delta</li>
+<li>Visuel des minis secteurs</li>
+<li>Progression du mini secteur courrant</li>
+</ul>
+
+<li>Fuel</li>
+<img src="fuel.png" />
+<ul>
+<li>Courant</li>
+<li>Par tours</li>
+<li>Tours restant</li>
+<li>Temps restant</li>
 </ul>
 
 **Configuration globale:**
