@@ -1,13 +1,32 @@
+﻿-- ============================================================
+-- SRA GapView
+-- Created by Wile64 on May 2025
 --
--- Created by Wile64 on may 2025
---
-
+-- App features summary:
+-- - Displays a live list of cars around the focused driver:
+--   configurable count ahead and behind.
+-- - Shows on-track time gap for each car versus the focused car.
+-- - Gap sign convention:
+--   +X.XXs = car ahead on track
+--   -X.XXs = car behind on track
+-- - Uses visual states for quick reading:
+--   focused driver, leader, blue-flag context, pit status.
+-- - Can highlight a lapped car physically ahead in blue.
+-- - Optional columns:
+--   car badge, nation flag, tyre compound,
+--   lap count, best lap, last lap (with invalid lap coloring).
+-- - Personal best flash:
+--   if a new valid lap equals best lap, best/last are purple
+--   for BEST_LAP_FLASH_TIME_MS.
+-- - Includes a settings panel for layout scale and visible items.
+-- - Persists user settings with `ac.storage`.
+-- ============================================================
 local AppConfig           = ac.storage {
   showAhead      = 3,
   showBehind     = 3,
   showBadge      = true,
   showNationFlag = true,
-  showNumber     = true,
+  showLapCount   = true,
   showTyre       = true,
   showBestLap    = true,
   showLastLap    = true,
@@ -15,32 +34,35 @@ local AppConfig           = ac.storage {
 }
 
 local appVisible          = true
-local updateInterval      = 1 -- Intervalle de mise à jour en secondes
-local timeSinceLastUpdate = 0 -- Temps écoulé depuis la dernière mise à jour
+local updateInterval      = 0.1 -- Standings refresh interval (seconds)
+local timeSinceLastUpdate = 0
 local initialized         = false
 
-local focusedIndex        = 0 -- index dans la liste
+local focusedIndex        = 0 -- index in standings for the focused driver
 local nickNameCache       = {}
 local standings           = {}
+local driverLapSnapshot   = {}
+local bestLapFlashUntil   = {}
+local nationFlagPathCache = {}
+local badgePathCache      = {}
+local rootFolder          = ac.getFolder(ac.FolderID.Root)
+local contentCarsFolder   = ac.getFolder(ac.FolderID.ContentCars)
 
--- 1) CONFIGURATION
-local POINT_SPACING       = 10                       -- espacement entre deux points (m)
-local trackLength         = ac.getSim().trackLengthM -- longueur du circuit (m)
-local N_POINTS            = math.floor(trackLength / POINT_SPACING)
+local trackLength         = ac.getSim().trackLengthM -- track length in meters
+local MAX_GAP_DISPLAY     = 99.99
 
 
 local palette = {
-  -- fonds
+  -- backgrounds
   bg_standard    = rgbm(0.0, 0.0, 0.0, 0.5),
   bg_selected    = rgbm(0.6, 0.6, 0.6, 0.5),
   bg_selectedPos = rgbm.colors.aqua,
   bg_leader      = rgbm.colors.lime,
   bg_blueflag    = rgbm(0.0, 0.5, 1.0, 0.5),
   bg_pit         = rgbm.colors.white,
-  bg_validLap    = rgbm(0.0, 0.0, 0.0, 0.5),
   bg_invalidLap  = rgbm.colors.red,
 
-  -- textes
+  -- text colors
   fg_standard    = rgbm.colors.white,
   fg_selected    = rgbm.colors.aqua,
   fg_selectedPos = rgbm.colors.black,
@@ -48,9 +70,9 @@ local palette = {
   fg_leaderPos   = rgbm.colors.black,
   fg_blueflag    = rgbm.colors.white,
   fg_pit         = rgbm.colors.black,
-  fg_validLap    = rgbm.colors.white,
   fg_invalidLap  = rgbm.colors.red,
   fg_aheadBlue   = rgbm(0, 0.6, 1, 1),
+  fg_pbFlash     = rgbm(0.7, 0.0, 1.0, 1),
 }
 
 local State   = { Standard = 1, Leader = 2, BlueFlag = 3, Focused = 4, AheadBlue = 5, LeaderFocused = 6, LeaderBlue = 7 }
@@ -91,11 +113,10 @@ local themes  = {
   },
 }
 
---- Récupère bg et fg en une fois pour un State et un composant donné.
--- @param state integer   une des clés de State (Standard, Leader, etc.)
--- @param comp  string    "position" | "text" | "pit" | "lapValid" | "lapInvalid"
--- @return bg, fg         deux tables rgbm
--- plutôt que return c.fg, c.bg
+--- Returns text and background colors for a given visual state and component.
+-- @param state integer one of `State.*`
+-- @param comp string "position" | "text" | "pit" | "lapInvalid"
+-- @return fg rgbm, bg rgbm
 local function getColors(state, comp)
   local c = themes[state][comp] or themes[State.Standard][comp]
   return c.fg, c.bg
@@ -107,16 +128,16 @@ if ac.onSessionStart then
   end)
 end
 
---- Génère un surnom court avec initiales en majuscule et première lettre du nom en majuscule
--- @param raw string  Nom complet tel que "[teamX] jean dupont"
--- @return string     Surnom formaté, ex. "J.Dupont"
+--- Builds a short display name from a full driver name.
+-- @param raw string full name, for example "[teamX] jean dupont"
+-- @return string short name, for example "J.Dupont"
 local function nickName(raw)
-  -- si déjà calculé, on renvoie directement
+  -- Fast path: cached value.
   if nickNameCache[raw] then
     return nickNameCache[raw]
   end
 
-  -- sinon on calcule
+  -- Strip team tags and split tokens.
   local onlyBrackets = raw:match("^%s*%[([^%]]+)%]%s*$")
   local s = onlyBrackets
       or raw:gsub("%b[]", ""):gsub("%b()", "")
@@ -143,36 +164,46 @@ local function nickName(raw)
     formatted = table.concat(parts)
   end
 
-  -- on stocke dans le cache
+  -- Cache computed nickname.
   nickNameCache[raw] = formatted
   return formatted
 end
 
 ---------------- FONCTIONS GAP
 
---- Renvoie la distance cumulée (m) depuis le départ
-local function getTotalDist(car)
-  return car.lapCount * trackLength
-      + car.splinePosition * trackLength
+local MIN_SPEED_FOR_GAP = 5         -- m/s, avoids unstable deltas at very low speeds
+local BEST_LAP_FLASH_TIME_MS = 5000 -- ms
+
+-- Gap signe et relation ahead/behind bases sur la distance reelle autour de la piste,
+-- avec gestion propre du wrap start/finish.
+local function getRelativeGapSeconds(focused, player)
+  if not focused or not player or focused.idx == player.idx then
+    return 0, false
+  end
+  if trackLength <= 0 then
+    return 0, false
+  end
+  if player.isInPit then
+    return 0, false
+  end
+
+  local focusedPosM = focused.trackPosM or (focused.splinePosition * trackLength)
+  local playerPosM = player.trackPosM or (player.splinePosition * trackLength)
+
+  local forwardDist = (playerPosM - focusedPosM) % trackLength
+  local backwardDist = trackLength - forwardDist
+  local isAhead = forwardDist <= backwardDist
+  local dist = isAhead and forwardDist or backwardDist
+
+  local speed = (focused.speed + player.speed) * 0.5
+  if speed < MIN_SPEED_FOR_GAP then
+    speed = math.max(focused.speed, player.speed, MIN_SPEED_FOR_GAP)
+  end
+
+  local gap = dist / speed
+  return isAhead and gap or -gap, isAhead
 end
 
---- Renvoie l’indice du point sur lequel se trouve la car (0 à N_POINTS-1)
-local function getPointIndex(car)
-  local dist = getTotalDist(car)
-  -- floor(dist/POINT_SPACING) donne 0,1,... puis on modulo N_POINTS
-  return math.floor(dist / POINT_SPACING) % N_POINTS
-end
-
---- Calcule le temps (s) qu’il faut à une vitesse constante pour parcourir
---- deltaPoints points (wrap-around géré grâce à modulo)
-local function timeBetweenPoints(From, To)
-  -- nombre de points à franchir en avant jusqu’à idxTo
-  local idxTo = getPointIndex(To)
-  local idxFrom = getPointIndex(From)
-  local dp = (idxTo - idxFrom) % N_POINTS
-  local dist = dp * POINT_SPACING
-  return (From.speed > 1) and (dist / From.speed) or 0
-end
 --------------------------
 
 function script.update(dt)
@@ -185,58 +216,91 @@ function script.update(dt)
     local nCars         = sim.carsCount
     standings           = {}
 
-    -- collecte distance parcourue (m) et vitesse (m/s)
+    -- Collect a snapshot for connected and active cars.
     for i = 0, nCars - 1 do
       local car = ac.getCar(i)
       if car then
         if car.isConnected and not car.isRetired then
+          local currentBestLap = car.bestLapTimeMs
+          local currentLastLap = car.previousLapTimeMs
+          local currentLastValid = car.isLastLapValid
+          local currentLapCount = car.lapCount
+          local prevLapCount = driverLapSnapshot[i]
+          local flashUntil = bestLapFlashUntil[i] or 0
+
+          local lastLapIsBest = math.abs(currentLastLap - currentBestLap) <= 1
+          if prevLapCount
+              and currentLapCount > prevLapCount
+              and currentLastValid
+              and currentBestLap > 0
+              and currentLastLap > 0
+              and lastLapIsBest
+          then
+            flashUntil = sim.time + BEST_LAP_FLASH_TIME_MS
+          end
+          bestLapFlashUntil[i] = flashUntil
+
+          driverLapSnapshot[i] = currentLapCount
+
           standings[#standings + 1] = {
-            idx            = i,
-            name           = nickName(ac.getDriverName(i)), -- récupère le nom du pilote
-            nationCode     = ac.getDriverNationCode(i),
-            splinePosition = car.splinePosition,
-            focused        = car.focused,
-            speed          = car.speedMs,
-            gap            = 0,
-            position       = car.racePosition,
-            bestLap        = car.bestLapTimeMs,
-            isLastLapValid = car.isLastLapValid,
-            lastLap        = car.previousLapTimeMs,
-            tyre           = ac.getTyresName(i),
-            isInPit        = car.isInPitlane,
-            number         = ac.getDriverNumber(i),
-            carName        = ac.getCarID(i),
-            lapCount       = car.lapCount,
+            idx               = i,
+            name              = nickName(ac.getDriverName(i)),
+            nationCode        = ac.getDriverNationCode(i),
+            splinePosition    = car.splinePosition,
+            focused           = car.focused,
+            speed             = car.speedMs,
+            trackPosM         = car.splinePosition * trackLength,
+            gap               = 0,
+            position          = car.racePosition,
+            bestLap           = car.bestLapTimeMs,
+            isLastLapValid    = car.isLastLapValid,
+            lastLap           = car.previousLapTimeMs,
+            tyre              = ac.getTyresName(i),
+            isInPit           = car.isInPitlane,
+            carName           = ac.getCarID(i),
+            lapCount          = currentLapCount,
+            bestLapFlashUntil = flashUntil,
           }
         end
       end
     end
 
 
-    -- tri descendant par distance
+    -- Sort by physical position on track, not race position.
     table.sort(standings, function(a, b) return a.splinePosition > b.splinePosition end)
 
-    -- trouve la position du joueur
+    -- Find focused driver index in sorted standings.
     for pos, e in ipairs(standings) do
       if e.focused then
         focusedIndex = pos
         break
       end
     end
+    if #standings > 0 and (focusedIndex < 1 or focusedIndex > #standings) then
+      focusedIndex = 1
+    end
   end
 end
 
 local function drawNationFlag(nationCode)
-  local flagFilePath = ac.getFolder(ac.FolderID.Root) .. string.format("/content/gui/NationFlags/%s.png", nationCode)
+  local flagFilePath = nationFlagPathCache[nationCode]
+  if not flagFilePath then
+    flagFilePath = rootFolder .. string.format("/content/gui/NationFlags/%s.png", nationCode)
+    nationFlagPathCache[nationCode] = flagFilePath
+  end
   ui.image(flagFilePath, AppConfig.scale)
 end
 
 local function drawBadge(carName)
-  local badgeFilePath = ac.getFolder(ac.FolderID.ContentCars) .. string.format("/%s/ui/badge.png", carName)
+  local badgeFilePath = badgePathCache[carName]
+  if not badgeFilePath then
+    badgeFilePath = contentCarsFolder .. string.format("/%s/ui/badge.png", carName)
+    badgePathCache[carName] = badgeFilePath
+  end
   ui.image(badgeFilePath, AppConfig.scale)
 end
 
---- Écrire un texte avec formatage spécifique
+--- Draws a cell with background and aligned text.
 ---@param text string
 ---@param lenght number
 ---@param colorText rgbm
@@ -251,43 +315,50 @@ local function writeText(text, lenght, colorText, colorBack, horizontalAligment)
 end
 
 local function getState(player, ahead)
-  -- Leader & Focused ?
+  -- Leader and focused.
   if player.position == 1 and player.focused then
     return State.LeaderFocused
   end
 
-  -- LeaderBlue : le leader (position==1), non-focus, mais physiquement derrière toi
+  -- Leader, not focused, but physically behind the focused driver.
   if player.position == 1 and not player.focused and not ahead then
     return State.LeaderBlue
   end
 
-  -- Simple Leader ?
+  -- Leader only.
   if player.position == 1 then
     return State.Leader
   end
 
-  --  Focused (non-leader) ?
+  -- Focused non-leader.
   if player.focused then
     return State.Focused
   end
   if standings[focusedIndex] then
-    -- BlueFlag (une voiture derrière toi mais non-focused) ?
+    -- BlueFlag: car behind on track but ahead in race position.
     if not ahead and player.position < standings[focusedIndex].position then
       return State.BlueFlag
     end
 
-    -- AheadBlue (une voiture devant toi mais non-focused) ?
+    -- AheadBlue: car ahead on track but behind in race position.
     if ahead and player.position > standings[focusedIndex].position then
       return State.AheadBlue
     end
   end
-  --  Rien d’autre ⇒ Standard
   return State.Standard
 end
 
 local function drawPlayerLine(player, ahead)
-  -- par défaut
-  local state = getState(player, ahead)
+  local playerGap = 0
+  local playerAhead = ahead
+  local focused = standings[focusedIndex]
+
+  if not player.focused and focused then
+    playerGap, playerAhead = getRelativeGapSeconds(focused, player)
+  end
+
+  -- Resolve color state after ahead/behind is recomputed from live gap.
+  local state = getState(player, playerAhead)
 
   writeText(string.format("%.2d", player.position), AppConfig.scale * 1.3, getColors(state, "position"))
 
@@ -299,11 +370,6 @@ local function drawPlayerLine(player, ahead)
     ui.sameLine()
     drawNationFlag(player.nationCode)
   end
-
-  if AppConfig.showNumber then
-    ui.sameLine()
-    writeText(string.format("%d", player.number), AppConfig.scale * 1.7, getColors(state, "text"))
-  end
   ui.sameLine()
   local fg, bg = getColors(state, "text")
   writeText(player.name, AppConfig.scale * 10, fg, bg, ui.Alignment.Start)
@@ -311,18 +377,19 @@ local function drawPlayerLine(player, ahead)
     ui.sameLine()
     writeText(player.tyre, AppConfig.scale * 1.7, getColors(state, "text"))
   end
+  if AppConfig.showLapCount then
+    ui.sameLine()
+    writeText(string.format("%.2d", player.lapCount), AppConfig.scale * 2.0, getColors(state, "text"))
+  end
   ui.sameLine()
   if player.focused then
     writeText("", AppConfig.scale * 4, getColors(state, "text"))
   else
-    if not player.isInPit then
-      if ahead then
-        player.gap = timeBetweenPoints(standings[focusedIndex], player)
-      else
-        player.gap = -timeBetweenPoints(player, standings[focusedIndex])
-      end
-    else
-      player.gap = 0
+    player.gap = playerGap
+    if player.gap > MAX_GAP_DISPLAY then
+      player.gap = MAX_GAP_DISPLAY
+    elseif player.gap < -MAX_GAP_DISPLAY then
+      player.gap = -MAX_GAP_DISPLAY
     end
     fg, bg = getColors(state, "text")
     writeText(string.format("%.2fs", player.gap), AppConfig.scale * 4, fg, bg, ui.Alignment.End)
@@ -331,11 +398,17 @@ local function drawPlayerLine(player, ahead)
   if AppConfig.showBestLap then
     ui.sameLine()
     fg, bg = getColors(state, "text")
+    if player.bestLapFlashUntil > ac.getSim().time then
+      fg = palette.fg_pbFlash
+    end
     writeText(ac.lapTimeToString(player.bestLap), AppConfig.scale * 4, fg, bg, ui.Alignment.End)
   end
   if AppConfig.showLastLap then
     ui.sameLine()
-    if player.isLastLapValid then
+    if player.bestLapFlashUntil > ac.getSim().time then
+      _, bg = getColors(state, "text")
+      writeText(ac.lapTimeToString(player.lastLap), AppConfig.scale * 4, palette.fg_pbFlash, bg, ui.Alignment.End)
+    elseif player.isLastLapValid then
       fg, bg = getColors(state, "text")
       writeText(ac.lapTimeToString(player.lastLap), AppConfig.scale * 4, fg, bg, ui.Alignment.End)
     else
@@ -352,27 +425,36 @@ end
 function script.windowMain(dt)
   if not appVisible then return end
 
-  ui.pushDWriteFont('OneSlot:\\fonts\\.')
+  local n = #standings
+  if n == 0 then
+    return
+  end
+
+  ui.pushDWriteFont('OneSlot:/fonts;Weight=Bold;Stretch=Condensed')
   ui.pushStyleVar(ui.StyleVar.ItemSpacing, vec2(2, 3))
 
-  local n = #standings
-
-  local function drawRange(startOffset, count, isAhead)
-    for d = startOffset, startOffset + count - 1 do
-      local idx = ((focusedIndex + d - 1) % n) + 1
-      drawPlayerLine(standings[idx], isAhead)
-    end
+  if focusedIndex < 1 or focusedIndex > n then
+    focusedIndex = 1
   end
-  if n == 1 then
-    drawPlayerLine(standings[focusedIndex], false)
-  elseif n <= 3 then
-    drawRange(-n, n)
-  else
-    local ahead = math.min(AppConfig.showAhead, n)
-    local behind = math.min(AppConfig.showBehind, n)
-    drawRange(-ahead, ahead, true)
-    drawPlayerLine(standings[focusedIndex], false)
-    drawRange(1, behind, false)
+
+  local drawn = {}
+  local function drawOffset(offset)
+    local idx = ((focusedIndex + offset - 1) % n) + 1
+    if drawn[idx] then return end
+    drawn[idx] = true
+    drawPlayerLine(standings[idx], offset < 0)
+  end
+
+  local maxOthers = math.max(0, n - 1)
+  local ahead = math.min(AppConfig.showAhead, maxOthers)
+  local behind = math.min(AppConfig.showBehind, maxOthers)
+
+  for d = -ahead, -1 do
+    drawOffset(d)
+  end
+  drawOffset(0)
+  for d = 1, behind do
+    drawOffset(d)
   end
 
   ui.popStyleVar()
@@ -380,7 +462,7 @@ function script.windowMain(dt)
 end
 
 function script.windowSettings(dt)
-  AppConfig.scale = ui.slider('##scale', AppConfig.scale, 10.0, 30.0, 'Scale: %1.0f')
+  AppConfig.scale = ui.slider('##scale', AppConfig.scale, 10.0, 50.0, 'Scale: %1.0f')
   AppConfig.showAhead = ui.slider('##showBefore', AppConfig.showAhead, 1.0, 10.0, 'Show car ahead: %1.0f')
   AppConfig.showBehind = ui.slider('##showAfter', AppConfig.showBehind, 1.0, 10.0, 'Show car behind: %1.0f')
   if ui.checkbox("Show car badge logo", AppConfig.showBadge) then
@@ -389,8 +471,8 @@ function script.windowSettings(dt)
   if ui.checkbox("Show nation flag", AppConfig.showNationFlag) then
     AppConfig.showNationFlag = not AppConfig.showNationFlag
   end
-  if ui.checkbox("Show car number", AppConfig.showNumber) then
-    AppConfig.showNumber = not AppConfig.showNumber
+  if ui.checkbox("Show lap count", AppConfig.showLapCount) then
+    AppConfig.showLapCount = not AppConfig.showLapCount
   end
   if ui.checkbox("Show tyre", AppConfig.showTyre) then
     AppConfig.showTyre = not AppConfig.showTyre
@@ -406,3 +488,9 @@ end
 function script.onShowWindowMain() appVisible = true end
 
 function script.onHideWindowMain() appVisible = false end
+
+if ac.getPatchVersionCode() < 3116 then
+  script.windowMain = function(dt)
+    ui.text('CSP v0.2.4 or above is required.')
+  end
+end
