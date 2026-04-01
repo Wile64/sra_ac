@@ -81,6 +81,7 @@ function SpeedWidget:new()
     tcMode = 0,
     absMode = 0,
     brakeBias = 0,
+    lapValid = true,
     gearIndex = 0,
     gearCount = 0,
     focusedCarIndex = -1,
@@ -109,6 +110,7 @@ function SpeedWidget:update(dt, context)
   self.tcMode = car.tractionControlMode or 0
   self.absMode = car.absMode or 0
   self.brakeBias = car.brakeBias or 0
+  self.lapValid = car.isLapValid ~= false
   self.recommendedShiftRpm = self.shiftLogic:getShiftRpm(self.gearIndex)
 end
 
@@ -149,7 +151,8 @@ function SpeedWidget:draw(dt, drawContext)
   ui.pushDWriteFont(font.police)
   ui.pushStyleVar(ui.StyleVar.ItemSpacing, vec2(0, 0))
 
-  ui.drawRectFilled(panelPos, panelPos + panelSize, panelBg, 10 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
+  ui.drawRectFilled(panelPos, panelPos + panelSize, panelBg, 10 * scale,
+    ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
   ui.drawRect(panelPos, panelPos + panelSize, line, 10 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
 
   local rpmBarPos = panelPos + vec2(12, 8) * scale
@@ -171,9 +174,12 @@ function SpeedWidget:draw(dt, drawContext)
   local gearBoxPos = vec2(contentPos.x + speedBoxSize.x + gap, contentPos.y)
   local gearBoxSize = vec2(contentSize.x - speedBoxSize.x - gap, contentSize.y)
 
-  ui.drawRectFilled(contentPos, contentPos + speedBoxSize, panelBgDark, 7 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
-  ui.drawRect(contentPos, contentPos + speedBoxSize, line, 7 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
-  ui.drawRectFilled(gearBoxPos, gearBoxPos + gearBoxSize, panelBgDark, 7 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
+  ui.drawRectFilled(contentPos, contentPos + speedBoxSize, panelBgDark, 7 * scale,
+    ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
+  ui.drawRect(contentPos, contentPos + speedBoxSize, line, 7 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags
+    .TopLeft)
+  ui.drawRectFilled(gearBoxPos, gearBoxPos + gearBoxSize, panelBgDark, 7 * scale,
+    ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
   ui.drawRect(gearBoxPos, gearBoxPos + gearBoxSize, line, 7 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
 
   local speedRectA = contentPos + vec2(6 * scale, 0)
@@ -189,12 +195,19 @@ function SpeedWidget:draw(dt, drawContext)
   ui.dwriteDrawTextClipped(self.gear, 42 * scale, gearBoxPos, gearBoxPos + gearBoxSize,
     ui.Alignment.Center, ui.Alignment.Center, false, gearAccent)
 
+  local lapStateColor = self.lapValid and colors.valuePositive or colors.valueNegative
+  local lapStateA = vec2(contentPos.x * 4, panelPos.y + 1 * scale)
+  local lapStateB = vec2(contentPos.x * 7, rpmBarPos.y - 1 * scale)
+  ui.drawRectFilled(lapStateA, lapStateB, lapStateColor, 7 * scale,
+    ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
+
   local statsPos = panelPos + vec2(16, 84) * scale
   local statsSize = vec2(panelSize.x - 32 * scale, 20 * scale)
   local statAccent = colors.valueEdit
   local statBg = panelBgDark
 
-  ui.drawRectFilled(statsPos, statsPos + statsSize, statBg, 6 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
+  ui.drawRectFilled(statsPos, statsPos + statsSize, statBg, 6 * scale,
+    ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
   ui.drawRect(statsPos, statsPos + statsSize, line, 6 * scale, ui.CornerFlags.BottomRight + ui.CornerFlags.TopLeft)
 
   local segmentWidth = statsSize.x / 3
@@ -204,9 +217,9 @@ function SpeedWidget:draw(dt, drawContext)
   end
 
   local stats = {
-    { 'TC', self.tcMode > 0 and tostring(self.tcMode) or 'Off' },
+    { 'TC',  self.tcMode > 0 and tostring(self.tcMode) or 'Off' },
     { 'ABS', self.absMode > 0 and tostring(self.absMode) or 'Off' },
-    { 'BB', string.format('%.2f%%', self.brakeBias) },
+    { 'BB',  string.format('%.2f%%', self.brakeBias) },
   }
 
   for i = 1, 3 do
