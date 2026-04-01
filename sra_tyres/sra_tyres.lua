@@ -438,7 +438,7 @@ local function getTyreColor(tyreTemp)
   else
     greenComponent = mappedProgress
   end
-  return rgbm(redComponent, greenComponent, blueComponent, 0.8)
+  return rgbm(redComponent, greenComponent, blueComponent, 0.7)
 end
 
 local function getDiscColor(DiscTemp, front)
@@ -609,15 +609,21 @@ local function drawTyreCard(tyre, rectSize, isFront, isLeft)
     ui.drawRectFilled(p1, p2, isBlown and rgbm(0, 0, 0, 1) or getTyreColor(temp), (k == 0 or k == 2) and 4 or 3)
   end
 
+  if tyre.tyreDirty > 0 and not isBlown then
+    local dirtAmount = math.max(0, math.min(tyre.tyreDirty, 1))
+    local dirtColor = rgbm(0.34, 0.27, 0.08, 1)
+    local dirtHeight = tyreBodyHeight * dirtAmount
+    for k = 0, 2 do
+      local p1 = vec2(pos.x + k * (innerWidth + sectionSpacing), pos.y)
+      local p2 = p1 + vec2(innerWidth, tyreBodyHeight)
+      ui.drawRectFilled(vec2(p1.x, p2.y - dirtHeight), p2, dirtColor, (k == 0 or k == 2) and 4 or 3)
+    end
+  end
+
   local coreColor = (tyrewheelLocks[tyreID].wheelLock or isBlown)
       and rgbm(1, 1, 1, 0.7)
       or getTyreColor(tyre.tyreCoreTemperature)
   ui.drawRectFilled(corePos, corePos + coreSize, coreColor, 5)
-
-  if tyre.tyreDirty > 0 and not isBlown then
-    local dirtHeight = coreHeight * math.min(tyre.tyreDirty / 5.0, 1)
-    ui.drawRectFilled(corePos + vec2(0, coreHeight - dirtHeight), corePos + coreSize, rgbm(0.45, 0.42, 0.14, 0.55), 4)
-  end
 
   if isWheelSlipping(tyre) then
     ui.drawImage(images.slip, pos, pos + vec2(bandWidth, tyreBodyHeight), rgbm.colors.orange)
