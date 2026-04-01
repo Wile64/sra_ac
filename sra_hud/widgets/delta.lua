@@ -7,6 +7,7 @@ local POINT_EVERY_METERS = 5
 local BASE_FONT_SIZE = 20
 local MIN_CROSS_TIME = 1.0
 local MINI_SECTOR_COUNT = 20
+local LOOP_WRAP_GUARD_TIME = 1500
 local DEBUG_DELTA_LOG = true
 
 local function clamp01(x)
@@ -325,6 +326,26 @@ function DeltaWidget:getSeriesTimeAt(values, index)
   return nil
 end
 
+function DeltaWidget:sanitizeLapTimes(values, lapDuration)
+  local sanitized = {}
+  local lastValue = nil
+
+  for i = 1, self.sampleCount do
+    local value = values[i]
+    if value ~= nil then
+      value = math.max(0, math.min(value, lapDuration))
+      if lastValue ~= nil and value < lastValue then
+        value = lastValue
+      end
+      sanitized[i] = value
+      lastValue = value
+    end
+  end
+
+  sanitized[self.sampleCount] = lapDuration
+  return sanitized
+end
+
 function DeltaWidget:effectiveNow(now)
   if self.pitPaused then
     return self.pitPauseStartedAt - self.pausedDuration
@@ -390,6 +411,7 @@ function DeltaWidget:onCrossedFinishLine(carID, timer)
   self.lapRunning = false
   self.pitPaused = false
   local lapDuration = self:effectiveNow(timer) - self.lapStartTime
+  local sanitizedLapTimes = self:sanitizeLapTimes(self.currentLapTimes, lapDuration)
   self:logEvent('cross_finish', {
     carID = carID,
     timer = timer,
@@ -401,7 +423,7 @@ function DeltaWidget:onCrossedFinishLine(carID, timer)
   })
   if self:canStoreReference() and lapDuration < self.referenceLapTime then
     self.referenceLapTime = lapDuration
-    self.referenceTimes = self.currentLapTimes
+    self.referenceTimes = sanitizedLapTimes
     self.referenceCompleted = true
     self:saveReference()
   end
@@ -486,7 +508,25 @@ function DeltaWidget:update(dt, context)
 
   local spline = car.splinePosition
   local lapTimeNow = self:effectiveNow(now) - self.lapStartTime
+  if lapTimeNow < 0 then
+    self:logEvent('negative_lap_time', {
+      simTime = now,
+      lapStartTime = self.lapStartTime,
+      lapTimeNow = lapTimeNow,
+      spline = spline,
+    })
+    return
+  end
   local runProgress = self:getRunProgress(spline)
+  if not self.isP2PTrack and lapTimeNow < LOOP_WRAP_GUARD_TIME and runProgress > 0.95 then
+    self:logEvent('loop_wrap_guard', {
+      simTime = now,
+      lapTimeNow = lapTimeNow,
+      spline = spline,
+      runProgress = runProgress,
+    })
+    runProgress = 0
+  end
   local index = self:progressToIndex(runProgress)
 
   if self.lastRecordedIndex ~= nil and index > self.lastRecordedIndex then
@@ -538,14 +578,13 @@ function DeltaWidget:update(dt, context)
         break
       end
 
-      local startIdx = math.max(endIdx - self.samplesPerMiniSector + 1, 1)
-      local currentStartTime = startIdx == 1 and 0 or self:getSeriesTimeAt(self.currentLapTimes, startIdx)
-      local referenceStartTime = startIdx == 1 and 0 or self:getSeriesTimeAt(self.referenceTimes, startIdx)
+      local startIdx = (miniIndex - 1) * self.samplesPerMiniSector
+      local currentStartTime = startIdx <= 0 and 0 or self:getSeriesTimeAt(self.currentLapTimes, startIdx)
+      local referenceStartTime = startIdx <= 0 and 0 or self:getSeriesTimeAt(self.referenceTimes, startIdx)
       local currentEndTime = self:getSeriesTimeAt(self.currentLapTimes, endIdx)
       local referenceEndTime = self:getSeriesTimeAt(self.referenceTimes, endIdx)
 
-      if self.miniSectorState[miniIndex] == nil
-          and currentEndTime ~= nil
+      if currentEndTime ~= nil
           and referenceEndTime ~= nil
           and currentStartTime ~= nil
           and referenceStartTime ~= nil then
