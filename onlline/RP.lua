@@ -28,35 +28,34 @@ SHOWAHEADMARKER = 1
 ]]
 
 --- Option de configurations
-local enabled = 1
+local enabled                 = 1
 
-local runTitle = "Be careful and drive in lines"
-local runSubtitle = "Do not exceed 180 KM/H"
+local runTitle                = "Be careful and drive in lines"
+local runSubtitle             = "Do not exceed 180 KM/H"
 
-local blackFlagStart = 0.78
-local blackTitle = "Take the %s side"
-local blackSubtitle = "SLOW DOWN TO 80 KM/H"
+local blackFlagStart          = 0.78
+local blackTitle              = "Take the %s side"
+local blackSubtitle           = "SLOW DOWN TO 80 KM/H"
 
-local redFlagStart = 0.92
-local redTitle = "PIT LIMITER ON"
-local redSubtitle = "START IS IMMINENT"
+local redFlagStart            = 0.92
+local redTitle                = "PIT LIMITER ON"
+local redSubtitle             = "START IS IMMINENT"
 
-local showAfterRedSec = 2
-local showTopGate = 1
-local showRoadGate = 1
-local showAheadMarker = 1
+local showAfterRedSec         = 2
+local showTopGate             = 1
+local showRoadGate            = 1
+local showAheadMarker         = 1
 
 ----------------------
-local ZONE_BANNER_HEIGHT_M = 5.1
+local ZONE_BANNER_HEIGHT_M    = 5.1
 local ZONE_BANNER_THICKNESS_M = 0.35
-local ROAD_GATE_LENGTH_M = 3.0
-local TITLE_TEXT = rgbm(0.95, 0.97, 0.99, 1)
-local SUBTITLE_TEXT = rgbm(1, 1, 1, 1)
-local paint = ac.TrackPaint()
-local RECT_COLOR = rgbm(0.00, 0.0, 15.0, 0.5)
-local AHEAD_COLOR = rgbm(0.00, 15.0, 0.0, 0.4)
+local ROAD_GATE_LENGTH_M      = 3.0
+local TITLE_TEXT              = rgbm(0.95, 0.97, 0.99, 1)
+local SUBTITLE_TEXT           = rgbm(1, 1, 1, 1)
+local RECT_COLOR              = rgbm(0.00, 0.0, 15.0, 0.5)
+local AHEAD_COLOR             = rgbm(0.00, 15.0, 0.0, 0.4)
 
-local formationState = {
+local formationState          = {
   phase = "idle",
   titleMessage = "",
   subtitleMessage = "",
@@ -65,26 +64,24 @@ local formationState = {
 }
 
 -- Screen resolution
-local screen = ac.getSim().windowSize
+local screen                  = ac.getSim().windowSize
 -- Scale for UI
-local scale = screen.y / 1080
+local scale                   = screen.y / 1080
 -- Default font size
-local fontSize = 35 * scale
---Side in start position grid (1 = left, -1 = right)
-local leaderSideStart = ac.INIConfig.load(ac.getFolder(ac.FolderID.ContentTracks) ..
-  '/' .. ac.getTrackFullID('/') .. '/data/crew.ini'):get('HEADER', 'SIDE', -1)
-local runwaySide = 'unknow'
-local raceStarted = false
-
+local fontSize                = 35 * scale
+local runwaySide              = 'unknow'
+local raceStarted             = false
+local waitingForNeutralFlag   = false
 
 local function resetState()
   raceStarted = false
   runwaySide = 'unknow'
   formationState.phase = "idle"
-  formationState.phaseMessage = ""
-  formationState.sideMessage = ""
+  formationState.titleMessage = ""
+  formationState.subtitleMessage = ""
   formationState.lastLapCount = 0
   formationState.aheadCar = nil
+  ac.log("resetState")
 end
 
 local function wrap01(v)
@@ -160,9 +157,7 @@ local function getSegmentSidePoints(progress)
   local leftEdge = splineCenter - right * leftSide
   local rightEdge = splineCenter + right * rightSide
   local trackCenter = midpoint(leftEdge, rightEdge)
-  local evenSide = 0
-  if leaderSideStart == -1 then evenSide = 1 end
-  local outerEdge = evenSide == 0
+  local outerEdge = runwaySide == "left"
       and (leftEdge + right * 0.2)
       or (rightEdge - right * 0.5)
   local innerEdge = outerEdge + (trackCenter - outerEdge) * 0.8
@@ -356,26 +351,37 @@ function script.drawUI()
   drawCenterMessage()
 end
 
-ac.onSessionStart(function()
-  resetState()
-end)
-
 local function crossedThreshold(progress, threshold)
   return threshold <= progress
 end
 
-local function init(car)
-  -- Even positions are on the right, odd positions are on the left
-  --to have the opposite, do focusedCarState.racePosition % 2 == 1
-  local evenSide = 0
-  if leaderSideStart == -1 then evenSide = 1 end
-  if car.racePosition % 2 == evenSide then
-    runwaySide = "right"
-  else
-    runwaySide = "left"
+local function detectCarSide(car)
+  local splinePos, _, right = getTrackBasis(car.splinePosition)
+  local sides = ac.getTrackAISplineSides(car.splinePosition)
+  local leftEdge = splinePos - right * (sides and sides.x or 0.5)
+  local rightEdge = splinePos + right * (sides and sides.y or 0.5)
+  local trackCenter = (leftEdge + rightEdge) * 0.5
+
+  local offset = car.position - trackCenter
+  local lateral = offset.x * right.x + offset.z * right.z
+
+  if lateral > 0 then
+    return "right"
+  elseif lateral < 0 then
+    return "left"
   end
+
+  return "left"
+end
+
+local function init(car)
+  ac.log("Init")
+
+  runwaySide = detectCarSide(car)
+
   -- Starting from the pits, do nothing
   if car.isInPitlane or car.isInPit then
+    ac.log("phase = hidden pit")
     formationState.phase = "hidden"
   end
   formationState.aheadCar = findAheadCar(car)
@@ -390,6 +396,7 @@ local function updateFormationState(car)
   end
   if phase == 'run' then
     if crossedThreshold(progress, blackFlagStart) then
+      ac.log("phase = black")
       formationState.phase = "black"
       formationState.titleMessage = string.format(blackTitle, runwaySide)
       formationState.subtitleMessage = blackSubtitle
@@ -399,6 +406,7 @@ local function updateFormationState(car)
   end
   if phase == 'black' then
     if crossedThreshold(progress, redFlagStart) then
+      ac.log("phase = red")
       formationState.phase = "red"
       formationState.titleMessage = redTitle
       formationState.subtitleMessage = redSubtitle
@@ -408,6 +416,7 @@ local function updateFormationState(car)
     end
   end
   if phase == 'red' and simTime - formationState.redTriggeredAt > showAfterRedSec then
+    ac.log("phase = hidden")
     formationState.phase = "hidden"
     formationState.titleMessage = ""
     formationState.subtitleMessage = ""
@@ -420,25 +429,38 @@ function script.update(dt)
   if enabled == 0 or formationState.phase == "hidden" then
     return
   end
-  -- Exit if not online and not race
+
   local sim = ac.getSim()
+
+  ac.debug("waitingForNeutralFlag", waitingForNeutralFlag)
+  ac.debug("raceFlagType ", tostring(sim.raceFlagType))
+
+  -- Exit if not online and not race
   if sim.raceSessionType ~= ac.SessionType.Race then
     return
   end
+
   local car = ac.getCar(0)
   if car == nil then
+    return
+  end
+
+  if waitingForNeutralFlag then
     return
   end
 
   if sim.raceFlagType == 0 then
     return
   end
+
   if not raceStarted then
+    ac.log("Race Started")
     raceStarted = true
     init(car)
   end
   -- Check if the car crossed start line
   if car.splinePosition < 0.001 and formationState.phase == "idle" then
+    ac.log("phase = run")
     formationState.phase = "run"
     formationState.titleMessage = runTitle
     formationState.subtitleMessage = runSubtitle
@@ -447,22 +469,13 @@ function script.update(dt)
     updateFormationState(car)
   end
 
-  ac.debug("enabled", enabled)
-  ac.debug("runTitle", runTitle)
-  ac.debug("runSubtitle", runSubtitle)
-  ac.debug("blackFlagStart", blackFlagStart)
-  ac.debug("blackTitle", blackTitle)
-  ac.debug("blackSubtitle", blackSubtitle)
-  ac.debug("redFlagStart", redFlagStart)
-  ac.debug("redTitle", redTitle)
-  ac.debug("redSubtitle", redSubtitle)
-  ac.debug("showAfterRedSec", showAfterRedSec)
-  ac.debug("showTopGate", showTopGate)
-  ac.debug("showRoadGate", showRoadGate)
-  ac.debug("showAheadMarker", showAheadMarker)
+  ac.debug("raceStarted", raceStarted)
+  ac.debug("runwaySide", runwaySide)
+  ac.debug("phase", formationState.phase)
 end
 
 ac.onOnlineWelcome(function(message, config) --Reads the script config from the extra options
+  ac.log("onOnlineWelcome")
   resetState()
   enabled = config:get("RP", "ENEBLED", 1)
   runTitle = config:get("RP", "RUNTITLE", "Be careful and drive in lines")
@@ -480,4 +493,19 @@ ac.onOnlineWelcome(function(message, config) --Reads the script config from the 
   showTopGate = config:get("RP", "SHOWTOPGATE", 1)
   showRoadGate = config:get("RP", "SHOWROADGATE", 1)
   showAheadMarker = config:get("RP", "SHOWAHEADMARKER", 1)
+end)
+
+ac.onSessionStart(function(sessionIndex, restarted)
+  ac.log("onSessionStart " .. tostring(restarted))
+  if restarted then
+    waitingForNeutralFlag = true
+  end
+  resetState()
+end)
+
+ac.onCarJumped(0, function(carIndex)
+  if waitingForNeutralFlag then
+    ac.log("onCarJumped " .. tostring(carIndex))
+    waitingForNeutralFlag = false
+  end
 end)
