@@ -71,16 +71,17 @@ local scale                   = screen.y / 1080
 local fontSize                = 35 * scale
 local runwaySide              = 'unknow'
 local raceStarted             = false
-local waitingForNeutralFlag   = false
+local isInitialized           = false
 
 local function resetState()
-  raceStarted = false
-  runwaySide = 'unknow'
-  formationState.phase = "idle"
-  formationState.titleMessage = ""
+  raceStarted                    = false
+  runwaySide                     = 'unknow'
+  formationState.phase           = "idle"
+  formationState.titleMessage    = ""
   formationState.subtitleMessage = ""
-  formationState.lastLapCount = 0
-  formationState.aheadCar = nil
+  formationState.lastLapCount    = 0
+  formationState.aheadCar        = nil
+  isInitialized                  = false
   ac.log("resetState")
 end
 
@@ -374,8 +375,8 @@ local function detectCarSide(car)
   return "left"
 end
 
-local function init(car)
-  ac.log("Init")
+local function initialize(car)
+  ac.log("initialize")
 
   runwaySide = detectCarSide(car)
 
@@ -385,6 +386,7 @@ local function init(car)
     formationState.phase = "hidden"
   end
   formationState.aheadCar = findAheadCar(car)
+  isInitialized = true
 end
 
 local function updateFormationState(car)
@@ -425,15 +427,30 @@ local function updateFormationState(car)
   end
 end
 
+local function isRacestarted(sim)
+  local timeToStart = sim.timeToSessionStart or 0
+  if timeToStart > 0 then
+    return false
+  end
+  return true
+end
+
 function script.update(dt)
+  ac.debug("isInitialized", isInitialized)
+  ac.debug("raceStarted", raceStarted)
+  ac.debug("runwaySide", runwaySide)
+  ac.debug("phase", formationState.phase)
   if enabled == 0 or formationState.phase == "hidden" then
     return
   end
 
   local sim = ac.getSim()
+  if sim.isPaused or sim.isInMainMenu then
+    return
+  end
 
-  ac.debug("waitingForNeutralFlag", waitingForNeutralFlag)
-  ac.debug("raceFlagType ", tostring(sim.raceFlagType))
+  ac.debug("timeToSessionStart ", tostring(sim.timeToSessionStart))
+
 
   -- Exit if not online and not race
   if sim.raceSessionType ~= ac.SessionType.Race then
@@ -445,18 +462,15 @@ function script.update(dt)
     return
   end
 
-  if waitingForNeutralFlag then
-    return
-  end
+  raceStarted = isRacestarted(sim)
 
-  if sim.raceFlagType == 0 then
-    return
-  end
-
-  if not raceStarted then
+  if raceStarted and not isInitialized then
     ac.log("Race Started")
-    raceStarted = true
-    init(car)
+    initialize(car)
+  end
+
+  if not isInitialized then
+    return
   end
   -- Check if the car crossed start line
   if car.splinePosition < 0.001 and formationState.phase == "idle" then
@@ -465,13 +479,14 @@ function script.update(dt)
     formationState.titleMessage = runTitle
     formationState.subtitleMessage = runSubtitle
   end
+
   if raceStarted then
+    if car.isInPitlane or car.isInPit then
+      ac.log("phase = hidden pit")
+      formationState.phase = "hidden"
+    end
     updateFormationState(car)
   end
-
-  ac.debug("raceStarted", raceStarted)
-  ac.debug("runwaySide", runwaySide)
-  ac.debug("phase", formationState.phase)
 end
 
 ac.onOnlineWelcome(function(message, config) --Reads the script config from the extra options
@@ -497,15 +512,5 @@ end)
 
 ac.onSessionStart(function(sessionIndex, restarted)
   ac.log("onSessionStart " .. tostring(restarted))
-  if restarted then
-    waitingForNeutralFlag = true
-  end
   resetState()
-end)
-
-ac.onCarJumped(0, function(carIndex)
-  if waitingForNeutralFlag then
-    ac.log("onCarJumped " .. tostring(carIndex))
-    waitingForNeutralFlag = false
-  end
 end)
